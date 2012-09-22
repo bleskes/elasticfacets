@@ -1,8 +1,18 @@
-= Elastic Facets =
+============== 
+Elastic Facets 
+==============
 
 A collection of facets (ehm, one at the moment) for ElasticSearch.
 
-== Faceted Date Histogram ==
+Installation
+============
+In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets`` 
+
+Included facets
+===============
+
+Faceted Date Histogram
+----------------------
 
 ElasticSearch comes with a powerfull built in facet called `Date Histogram <http://www.elasticsearch.org/guide/reference/api/search/facets/date-histogram-facet.html>`_. 
 Using the date histogram facet you can get a statistical analysis of a field for different time intervals (week by week, hour by hour etc.).
@@ -53,9 +63,6 @@ With it, you can replace the *value_field* parameter with a complete facet defin
 
 This snippet uses the Terms facet to return the top usernames on a week by week basis.
 
-== Installation ==
-
-In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets`` 
 
 
  
