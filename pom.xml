@@ -5,7 +5,7 @@
 	<artifactId>ElasticFacetsPlugin</artifactId>
 	<packaging>jar</packaging>
 	<version>1.0</version>
-	<name>ElasticFacetsPlugin</name>
+	<name>elasticfacets</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
 		<repository>
@@ -50,7 +50,7 @@
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.2.1</version>
 				<configuration>
-					<finalName>elasticsearch-${project.name}-${elasticsearch.version}</finalName>
+					<finalName>${project.name}-${elasticsearch.version}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<outputDirectory>${project.build.directory}/release/</outputDirectory>
 					<descriptors>
