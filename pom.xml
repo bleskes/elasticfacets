@@ -4,7 +4,7 @@
 	<groupId>org.leskes.elasticsearch.plugin.elasticfacets</groupId>
 	<artifactId>ElasticFacetsPlugin</artifactId>
 	<packaging>jar</packaging>
-	<version>0.1</version>
+	<version>0.2</version>
 	<name>elasticfacets</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
@@ -15,24 +15,6 @@
 		</repository>
 	</repositories>
 	<profiles>
-		<profile>
-			<id>0.19.8</id>
-			<activation>
-				<property>
-					<name>ES</name>
-					<value>0.19.8</value>
-				</property>
-			</activation>
-			<dependencies>
-				<dependency>
-					<!-- hard requirement for testing -->
-					<groupId>org.elasticsearch</groupId>
-					<artifactId>elasticsearch</artifactId>
-					<version>[0.19.8]</version>
-					<scope>test</scope>
-				</dependency>
-			</dependencies>
-		</profile>
 		<profile>
 			<id>0.19.9</id>
 			<activation>
@@ -47,6 +29,24 @@
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
 					<version>[0.19.9]</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>0.19.10</id>
+			<activation>
+				<property>
+					<name>ES</name>
+					<value>0.19.10</value>
+				</property>
+			</activation>
+			<dependencies>
+				<dependency>
+					<!-- hard requirement for testing -->
+					<groupId>org.elasticsearch</groupId>
+					<artifactId>elasticsearch</artifactId>
+					<version>[0.19.10]</version>
 					<scope>test</scope>
 				</dependency>
 			</dependencies>

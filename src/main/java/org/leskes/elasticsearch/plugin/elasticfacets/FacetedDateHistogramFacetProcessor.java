@@ -10,7 +10,7 @@ import java.util.Set;
 import org.elasticsearch.common.collect.ImmutableMap;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.jackson.JsonFactory;
+import org.elasticsearch.common.jackson.core.JsonFactory;
 import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.joda.TimeZoneRounding;
 import org.elasticsearch.common.joda.time.Chronology;
