@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>org.elasticsearch.plugin.elasticfacets</groupId>
+	<groupId>org.leskes.elasticsearch.plugin.elasticfacets</groupId>
 	<artifactId>ElasticFacetsPlugin</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0</version>
+	<version>0.1</version>
 	<name>elasticfacets</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
@@ -14,6 +14,44 @@
 			<url>https://oss.sonatype.org/content/groups/public/</url>
 		</repository>
 	</repositories>
+	<profiles>
+		<profile>
+			<id>0.19.8</id>
+			<activation>
+				<property>
+					<name>ES</name>
+					<value>0.19.8</value>
+				</property>
+			</activation>
+			<dependencies>
+				<dependency>
+					<!-- hard requirement for testing -->
+					<groupId>org.elasticsearch</groupId>
+					<artifactId>elasticsearch</artifactId>
+					<version>[0.19.8]</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>0.19.9</id>
+			<activation>
+				<property>
+					<name>ES</name>
+					<value>0.19.9</value>
+				</property>
+			</activation>
+			<dependencies>
+				<dependency>
+					<!-- hard requirement for testing -->
+					<groupId>org.elasticsearch</groupId>
+					<artifactId>elasticsearch</artifactId>
+					<version>[0.19.9]</version>
+					<scope>test</scope>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
 	<build>
 		<plugins>
 			<plugin>
@@ -38,7 +76,6 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.8</version>
 				<configuration>
-					<skipTests>true</skipTests>
 					<additionalClasspathElements>
 						<additionalClasspathElement>${project.build.directory}/classes/conf</additionalClasspathElement>
 						<additionalClasspathElement>${project.build.directory}/lib</additionalClasspathElement>
@@ -50,7 +87,7 @@
 				<artifactId>maven-assembly-plugin</artifactId>
 				<version>2.2.1</version>
 				<configuration>
-					<finalName>${project.name}-${elasticsearch.version}</finalName>
+					<finalName>${project.name}-${project.version}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 					<outputDirectory>${project.build.directory}/release/</outputDirectory>
 					<descriptors>
@@ -85,19 +122,28 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.8.2</version>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>6.1.1</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
-	        <groupId>log4j</groupId>
-	        <artifactId>log4j</artifactId>
-	        <version>1.2.17</version>
-      </dependency>
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-all</artifactId>
+			<version>1.3</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
 			<version>${elasticsearch.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 </project>

@@ -1,18 +1,10 @@
-package org.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticsearch.plugin.elasticfacets;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
 
 import org.apache.lucene.index.IndexReader;
 import org.elasticsearch.common.CacheRecycler;
-import org.elasticsearch.common.jackson.core.JsonParseException;
 import org.elasticsearch.common.joda.TimeZoneRounding;
-import org.elasticsearch.common.joda.time.Chronology;
-import org.elasticsearch.common.joda.time.DateTime;
-import org.elasticsearch.common.joda.time.DateTimeZone;
-import org.elasticsearch.common.joda.time.chrono.ISOChronology;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.trove.ExtTLongObjectHashMap;
@@ -20,21 +12,15 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.cache.field.data.FieldDataCache;
-import org.elasticsearch.index.field.data.FieldData;
-import org.elasticsearch.index.field.data.FieldData.StringValueInDocProc;
 import org.elasticsearch.index.field.data.FieldDataType;
-import org.elasticsearch.index.field.data.NumericFieldData;
 import org.elasticsearch.index.field.data.longs.LongFieldData;
 import org.elasticsearch.index.field.data.strings.StringFieldData;
-import org.elasticsearch.index.mapper.FieldMapper;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.search.facet.AbstractFacetCollector;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.FacetCollector;
 import org.elasticsearch.search.facet.FacetPhaseExecutionException;
 import org.elasticsearch.search.facet.FacetProcessor;
-import org.elasticsearch.search.facet.datehistogram.DateHistogramFacet;
-import org.elasticsearch.search.facet.datehistogram.DateHistogramFacet.Entry;
 import org.elasticsearch.search.internal.SearchContext;
 
 
@@ -69,7 +55,7 @@ public class FacetedDateHistogramCollector extends
 			TimeZoneRounding tzRounding,
 			FacetProcessor internalProcessor,
 			byte[] internalFacetConfig,
-			SearchContext context) throws JsonParseException, IOException {
+			SearchContext context) throws IOException {
 		super(facetName);
 		this.fieldDataCache = context.fieldDataCache();
 		this.keyFieldName = keyFieldName;
@@ -112,7 +98,7 @@ public class FacetedDateHistogramCollector extends
 		}
 		
 		
-		public FacetCollector createInternalCollector() throws JsonParseException, IOException {
+		public FacetCollector createInternalCollector() throws IOException {
 			XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(internalFacetConfig);
 	        try {
 	            return internalProcessor.parse("facet", parser, searchContext);

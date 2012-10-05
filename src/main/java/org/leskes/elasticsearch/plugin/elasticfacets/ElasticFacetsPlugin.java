@@ -1,4 +1,4 @@
-package org.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticsearch.plugin.elasticfacets;
 
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.logging.ESLogger;

@@ -1,4 +1,4 @@
-package org.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticsearch.plugin.elasticfacets;
 
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -222,14 +222,14 @@ public class FacetedDateHistogramFacet implements InternalFacet {
     }
 
     public void readFrom(StreamInput in) throws IOException {
-        name = in.readString();
+        name = in.readUTF();
 
         int size = in.readVInt();
         entries = CacheRecycler.popLongObjectMap();
         for (int i = 0; i < size; i++) {
         	Entry e = new Entry(in.readLong(),null);
         	
-        	String internal_type = in.readString();
+        	String internal_type = in.readUTF();
         	InternalFacet facet = (InternalFacet)InternalFacet.Streams.stream(internal_type).readFacet(internal_type, in);
         	e.internalFacet = facet;
             entries.put(e.time,e);
@@ -237,11 +237,11 @@ public class FacetedDateHistogramFacet implements InternalFacet {
     }
 
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(name);
+        out.writeUTF(name);
         out.writeVInt(entries.size());
         for (Entry e : collapseToAList()) {
             out.writeLong(e.time);
-            out.writeString(e.internalFacet.streamType());
+            out.writeUTF(e.internalFacet.streamType());
             e.internalFacet.writeTo(out);
         }
         releaseEntries();
