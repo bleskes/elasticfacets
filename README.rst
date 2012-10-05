@@ -6,7 +6,7 @@ A collection of facets (ehm, one at the moment) for ElasticSearch.
 
 Installation
 ============
-In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets/0.2`` 
+In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets/0.2``. Change the version number if needed (see Versions_).
 
 Versions
 ========
