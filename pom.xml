@@ -4,7 +4,7 @@
 	<groupId>org.leskes.elasticsearch.plugin.elasticfacets</groupId>
 	<artifactId>ElasticFacetsPlugin</artifactId>
 	<packaging>jar</packaging>
-	<version>0.2</version>
+	<version>0.2.1</version>
 	<name>elasticfacets</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
