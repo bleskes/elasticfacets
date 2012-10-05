@@ -33,24 +33,6 @@
 				</dependency>
 			</dependencies>
 		</profile>
-		<profile>
-			<id>0.19.9</id>
-			<activation>
-				<property>
-					<name>ES</name>
-					<value>0.19.9</value>
-				</property>
-			</activation>
-			<dependencies>
-				<dependency>
-					<!-- hard requirement for testing -->
-					<groupId>org.elasticsearch</groupId>
-					<artifactId>elasticsearch</artifactId>
-					<version>[0.19.9]</version>
-					<scope>test</scope>
-				</dependency>
-			</dependencies>
-		</profile>
 	</profiles>
 	<build>
 		<plugins>
@@ -117,7 +99,7 @@
 
 	</build>
 	<properties>
-		<elasticsearch.version>0.19.9</elasticsearch.version>
+		<elasticsearch.version>0.19.8</elasticsearch.version>
 	</properties>
 
 	<dependencies>
