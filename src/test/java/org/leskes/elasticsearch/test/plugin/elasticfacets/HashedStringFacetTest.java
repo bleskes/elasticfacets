@@ -84,7 +84,7 @@ public class HashedStringFacetTest extends AbstractNodesTests {
                 .setSearchType(SearchType.COUNT)
                 .setFacets(XContentFactory.jsonBuilder().startObject()
                         .startObject("facet1")
-                        .startObject("terms")
+                        .startObject("hashed_terms")
                         .field("field", "tag")
                         .endObject()
                         .endObject()

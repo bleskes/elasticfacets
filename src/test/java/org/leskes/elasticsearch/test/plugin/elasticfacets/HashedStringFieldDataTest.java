@@ -8,7 +8,8 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
-import org.leskes.elasticsearch.plugin.elasticfacets.HashedStringFieldData;
+import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldData;
+import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldType;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
 
@@ -16,16 +17,17 @@ public class HashedStringFieldDataTest
 {
   protected void assertHash(String A, String B)
   {
-    AssertJUnit.assertEquals("Hash code of " + A + " doesn't equal the one of " + B, A.hashCode(), B.hashCode());
+    AssertJUnit.assertEquals("Hash code of " + A + " doesn't equal the one of " + B, 
+    		HashedStringFieldType.hashCode(A),HashedStringFieldType.hashCode(B));
   }
 
   protected void assertHash(int A, String B) {
-    AssertJUnit.assertEquals("Hash code doesn't equal the one of " + B, A, B.hashCode());
+    AssertJUnit.assertEquals("Hash code doesn't equal the one of " + B, A, HashedStringFieldType.hashCode(B));
   }
 
   protected void assertHash(String A, int B)
   {
-    AssertJUnit.assertEquals("Hash code doesn't equal the one of " + A, A.hashCode(), B);
+    AssertJUnit.assertEquals("Hash code doesn't equal the one of " + A, HashedStringFieldType.hashCode(A), B);
   }
 
   @Test

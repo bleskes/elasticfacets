@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.leskes.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticsearch.plugin.elasticfacets.fields;
 
 import java.io.IOException;
 
@@ -43,6 +43,10 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
         super(fieldName);
         this.values = values;
         this.ordinals = ordinals;
+    }
+    
+    public int[] values() {
+    	return values;
     }
 
     @Override
@@ -137,7 +141,7 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
          }
 
         public void collectTerm(String term) {
-        	hashed_terms.add(term.hashCode());
+        	hashed_terms.add(HashedStringFieldType.hashCode(term));
         }
 
         public HashedStringFieldData buildSingleValue(String field, int[] ordinals) {

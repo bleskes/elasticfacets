@@ -28,6 +28,7 @@ public class ElasticFacetsPlugin extends AbstractPlugin  {
     public void processModule(Module module) {
 		if (module instanceof FacetModule) {
 	    	((FacetModule)module).addFacetProcessor(FacetedDateHistogramFacetProcessor.class);
+	    	((FacetModule)module).addFacetProcessor(HashedStringFacetProcessor.class);
 		}
     }
 
