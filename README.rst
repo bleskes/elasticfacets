@@ -79,6 +79,11 @@ With it, you can replace the *value_field* parameter with a complete facet defin
 
 This snippet uses the Terms facet to return the top usernames on a week by week basis.
 
+Hashed Strings Facet
+--------------------
 
+A facet that mimicks the standrand terms facet by with lowerer memory signature. Use full when you 
+want to facet on a field with many many possible string values. Of course, that means slightly more IO.
 
+-- WORK IN PROGRESS --
  
