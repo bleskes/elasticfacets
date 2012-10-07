@@ -4,6 +4,11 @@ Elastic Facets
 
 A collection of facets (ehm, one at the moment) for ElasticSearch.
 
+.. image:: https://travis-ci.org/bleskes/elasticfacets.png
+   :alt: build status
+   :align: right
+
+
 Installation
 ============
 In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets/0.2.1``. Change the version number if needed (see Versions_).
