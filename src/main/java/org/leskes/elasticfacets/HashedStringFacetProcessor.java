@@ -1,4 +1,4 @@
-package org.leskes.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticfacets;
 
 import java.io.IOException;
 import java.util.List;
@@ -15,7 +15,7 @@ import org.elasticsearch.search.facet.FacetCollector;
 import org.elasticsearch.search.facet.FacetProcessor;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.elasticsearch.search.internal.SearchContext;
-import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldType;
+import org.leskes.elasticfacets.fields.HashedStringFieldType;
 
 public class HashedStringFacetProcessor extends AbstractComponent implements
 		FacetProcessor {

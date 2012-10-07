@@ -1,4 +1,4 @@
-package org.leskes.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticfacets;
 
 import java.io.IOException;
 

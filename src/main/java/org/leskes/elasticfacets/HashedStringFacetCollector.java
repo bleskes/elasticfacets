@@ -1,5 +1,5 @@
 
-package org.leskes.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticfacets;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
@@ -11,6 +11,8 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.collect.BoundedTreeSet;
 import org.elasticsearch.common.collect.ImmutableSet;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.document.ResetFieldSelector;
 import org.elasticsearch.index.cache.field.data.FieldDataCache;
 import org.elasticsearch.index.field.data.FieldData;
@@ -28,8 +30,8 @@ import org.elasticsearch.search.facet.terms.support.EntryPriorityQueue;
 import org.elasticsearch.search.fetch.FetchPhaseExecutionException;
 import org.elasticsearch.search.internal.InternalSearchHitField;
 import org.elasticsearch.search.internal.SearchContext;
-import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldData;
-import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldType;
+import org.leskes.elasticfacets.fields.HashedStringFieldData;
+import org.leskes.elasticfacets.fields.HashedStringFieldType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,6 +46,10 @@ import java.util.regex.Pattern;
  */
 public class HashedStringFacetCollector extends AbstractFacetCollector {
 
+	final static ESLogger logger = Loggers
+			.getLogger(HashedStringFacetCollector.class);
+
+	
     private final FieldDataCache fieldDataCache;
 
     private final String indexFieldName;
@@ -120,14 +126,14 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     @Override
     protected void doSetNextReader(IndexReader reader, int docBase) throws IOException {
         if (current != null) {
-            missing += current.counts[0];
-            total += current.total - current.counts[0];
-            if (current.values.length > 1) {
+            missing += current.missing;
+            total += current.total;
+            if (current.values.length > 0) {
                 aggregators.add(current);
             }
         }
         fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader, indexFieldName);
-        current = new ReaderAggregator(fieldData);
+        current = new ReaderAggregator(fieldData, docBase);
     }
 
     @Override
@@ -139,10 +145,10 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     @Override
     public Facet facet() {
         if (current != null) {
-            missing += current.counts[0];
-            total += current.total - current.counts[0];
+            missing += current.missing;
+            total += current.total;
             // if we have values for this one, add it
-            if (current.values.length > 1) {
+            if (current.values.length > 0) {
                 aggregators.add(current);
             }
         }
@@ -164,7 +170,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
                 ReaderAggregator agg = queue.top();
                 int value = agg.currentValue;
                 int count = 0;
-                int docId = 0;
+                int docId = agg.currentDocId;
                 do {
                 	if (agg.currentCount != 0 ) {
                 		count += agg.currentCount;
@@ -179,9 +185,11 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
                         agg = queue.top();
                     }
                 } while (agg != null && value == agg.currentValue);
+                
+                assert (agg == null || value < agg.currentValue);
 
                 if (count > minCount) {
-                    if (excluded != null && excluded.contains(value)) {
+                	if (excluded != null && excluded.contains(value)) {
                         continue;
                     }
                     HashedStringEntry entry = new HashedStringEntry(value,docId, count);
@@ -242,6 +250,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private StringEntry convertHashEntryToStringEntry(HashedStringEntry hashedEntry) {
     	String term = getTermFromDoc(hashedEntry.docId);
+    	logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
+    			term,hashedEntry.termHash,HashedStringFieldType.hashCode(term),hashedEntry.count(),hashedEntry.docId);
     	return new StringEntry(term, hashedEntry.count());
 		
 	}
@@ -264,16 +274,19 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         final int[] counts;
         final int[] docIdsForValues; // of every value keep a docid where we run into it.
 
-        int position = 0;
+        int position = -1;
         int currentValue;
         int currentDocId;
         int currentCount;
         int total;
+        int missing;
+        int docBase;
 
-        public ReaderAggregator(HashedStringFieldData fieldData) {
+        public ReaderAggregator(HashedStringFieldData fieldData,int docBase) {
             this.values = fieldData.values();
             this.counts = CacheRecycler.popIntArray(fieldData.values().length);
             this.docIdsForValues = CacheRecycler.popIntArray(fieldData.values().length);
+            this.docBase = docBase;
         }
 
         public void close() {
@@ -282,8 +295,12 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 		}
 
 		public void onOrdinal(int docId, int ordinal) {
+			if (ordinal<0) {
+				missing++;
+				return; // no value no count..
+			}
             counts[ordinal]++;
-            docIdsForValues[ordinal] = docId;
+            docIdsForValues[ordinal] = docId+docBase;
             total++;
         }
 

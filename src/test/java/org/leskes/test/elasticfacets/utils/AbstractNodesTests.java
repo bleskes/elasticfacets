@@ -1,7 +1,7 @@
 
 // Base class for test that should interact with multiple notdes. STOLEN FROM ELASTIC SEARCH
 
-package org.leskes.elasticsearch.test.plugin.elasticfacets.utils;
+package org.leskes.test.elasticfacets.utils;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;

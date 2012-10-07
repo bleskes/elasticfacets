@@ -1,4 +1,4 @@
-package org.leskes.elasticsearch.plugin.elasticfacets.fields;
+package org.leskes.elasticfacets.fields;
 
 import org.elasticsearch.index.field.data.DocFieldData;
 import org.elasticsearch.index.field.data.FieldData;

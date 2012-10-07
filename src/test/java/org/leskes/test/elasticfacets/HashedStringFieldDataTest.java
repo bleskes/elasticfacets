@@ -1,6 +1,8 @@
-package org.leskes.elasticsearch.test.plugin.elasticfacets;
+package org.leskes.test.elasticfacets;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -8,10 +10,13 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
-import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldData;
-import org.leskes.elasticsearch.plugin.elasticfacets.fields.HashedStringFieldType;
+import org.leskes.elasticfacets.fields.HashedStringFieldData;
+import org.leskes.elasticfacets.fields.HashedStringFieldType;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
 
 public class HashedStringFieldDataTest
 {
@@ -90,4 +95,63 @@ public class HashedStringFieldDataTest
 
     indexWriter.close();
   }
+
+  @Test
+  public void hashedStringFieldData100Entires() throws Exception
+  {
+    Directory dir = new RAMDirectory();
+    IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(Lucene.VERSION, Lucene.STANDARD_ANALYZER));
+
+    indexWriter.addDocument(DocumentBuilder.doc().build());
+
+    
+    for (int i=0;i<100;i++)
+	    indexWriter.addDocument(DocumentBuilder.doc()
+	      .add(DocumentBuilder.field("svalue", String.format("term_%s",i))).build());
+
+    IndexReader reader = IndexReader.open(indexWriter, true);
+
+    HashedStringFieldData sFieldData = HashedStringFieldData.load(reader, "svalue");
+
+    assertThat(sFieldData.fieldName(),equalTo("svalue"));
+    assertThat(sFieldData.multiValued(),equalTo(false));
+    
+    int[] sortedValues = Arrays.copyOf(sFieldData.values(), sFieldData.values().length);
+    Arrays.sort(sortedValues);
+    assertThat("Internal values of field data are not sorted!", sFieldData.values(), equalTo(sortedValues));
+
+	assertThat(sFieldData.hasValue(0),equalTo(false));// first doc had no value!
+    
+    
+    for (int i=0;i<100;i++) {
+    	int docId= i+1;
+    	assertThat(sFieldData.hasValue(docId),equalTo(true));
+    	String term = String.format("term_%s",i);
+    	assertHash(term,sFieldData.hashValue(docId));
+
+    	final ArrayList<Integer> values = new ArrayList<Integer>();
+
+        sFieldData.forEachValueInDoc(docId, new HashedStringFieldData.HashedStringValueInDocProc()
+        {
+          public void onValue(int docId, int Hash) {
+            values.add(Integer.valueOf(Hash));
+          }
+
+          public void onMissing(int docId)
+          {
+          }
+        });
+        assertThat(values.size(),equalTo(1));
+
+        assertHash(((Integer)values.get(0)).intValue(), term);
+
+        values.clear();
+    }
+
+    
+
+    indexWriter.close();
+  }
+
+
 }

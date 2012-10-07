@@ -1,4 +1,4 @@
-package org.leskes.elasticsearch.plugin.elasticfacets;
+package org.leskes.elasticfacets;
 
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.io.stream.StreamInput;

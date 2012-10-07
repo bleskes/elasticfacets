@@ -17,9 +17,11 @@
  * under the License.
  */
 
-package org.leskes.elasticsearch.plugin.elasticfacets.fields;
+package org.leskes.elasticfacets.fields;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import org.apache.lucene.index.IndexReader;
 import org.elasticsearch.common.RamUsage;
@@ -36,7 +38,7 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
 	public static final HashedStringFieldType HASHED_STRING = new HashedStringFieldType();
 	
     protected final int[] values;
-    // order with value 0 indicates no value
+    // order with value -1 indicates no value
     protected final int[] ordinals;
 
     protected HashedStringFieldData(String fieldName, int[] values,int[] ordinals) {
@@ -69,7 +71,7 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
 
 	@Override
 	public boolean hasValue(int docId) {
-		return ordinals[docId] !=0;
+		return ordinals[docId] >=0;
 	}
 
 	@Override
@@ -112,7 +114,7 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
 
     public void forEachValueInDoc(int docId, HashedStringValueInDocProc proc) {
         int loc = ordinals[docId];
-        if (loc == 0) {
+        if (loc < 0) {
             proc.onMissing(docId);
             return;
         }
@@ -136,8 +138,9 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
 
     	 HashedStringTypeLoader() {
              super();
-             // the first one indicates null value
+             // the first one indicates null value.
              hashed_terms.add(0);
+
          }
 
         public void collectTerm(String term) {
@@ -145,7 +148,38 @@ public class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
         }
 
         public HashedStringFieldData buildSingleValue(String field, int[] ordinals) {
-            return new HashedStringFieldData(field, hashed_terms.toArray(new int[hashed_terms.size()]),ordinals);
+        	// as we hashed the values they are not sorted. They need to be for proper working of the rest. 
+        	Integer[] translation_indices = new Integer[hashed_terms.size()-1]; // drop the first "non value place"
+        	for (int i=0;i<translation_indices.length;i++) translation_indices[i]=i+1; // one ofsset for the dropped place
+        	Arrays.sort(translation_indices, new Comparator<Integer>() {
+
+				public int compare(Integer paramT1, Integer paramT2) {
+					int d1 = hashed_terms.get(paramT1);
+					int d2 = hashed_terms.get(paramT2);
+					return d1 < d2 ? -1 : (d1 == d2 ? 0 : 1);
+				}}
+        	);
+        	
+        	
+        	// now build a sorted array and update the ordinal values (added the n value in the beginning)
+        	int[] sorted_values =  new int[hashed_terms.size()-1];
+        	
+        	
+        	int[] new_location_of_old_index = new int[hashed_terms.size()];
+        	for (int i=0;i<translation_indices.length;i++) { 
+        		sorted_values[i]=hashed_terms.get(translation_indices[i]);
+        		new_location_of_old_index[translation_indices[i]]=i;
+        	}
+        	
+        	// before the soring the first value (0) was indicating docs with no values. After sorting 0 has moved
+        	// We could use the value as indication but that's an assumption of it being an illegal hash value.
+        	// Rather then that - we assign an ordinal of -1.
+        	new_location_of_old_index[0]=-1;
+        	
+        	for (int i=0;i<ordinals.length;i++) 
+        		ordinals[i]=new_location_of_old_index[ordinals[i]];
+        	
+            return new HashedStringFieldData(field,sorted_values,ordinals);
         }
 
         public HashedStringFieldData buildMultiValue(String field, int[][] ordinals) {
