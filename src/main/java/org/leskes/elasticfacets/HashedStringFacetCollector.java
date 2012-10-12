@@ -19,6 +19,7 @@ import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
 import org.elasticsearch.index.field.data.strings.StringFieldData;
 import org.elasticsearch.index.mapper.MapperService;
+import org.elasticsearch.script.SearchScript;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.facet.AbstractFacetCollector;
 import org.elasticsearch.search.facet.Facet;
@@ -38,6 +39,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -71,6 +73,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     private ReaderAggregator current;
     
     private final SearchContext context;
+    
+    private final SearchScript output_script;
 
     long missing;
     long total;
@@ -78,7 +82,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     private final ImmutableSet<Integer> excluded;
 
     public HashedStringFacetCollector(String facetName, String fieldName, int size, TermsFacet.ComparatorType comparatorType, boolean allTerms, 
-    								  ImmutableSet<Integer> excluded,SearchContext context) {
+    								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
+    								  Map<String, Object> params) {
         super(facetName);
         this.fieldDataCache = context.fieldDataCache();
         this.size = size;
@@ -103,6 +108,13 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
             throw new ElasticSearchIllegalArgumentException("HashedStringFacet doesn't support sorting by term.");
         	
         }
+        
+        if (output_script != null) {
+            this.output_script = context.scriptService().search(context.lookup(), output_scriptLang, output_script, params);
+        } else {
+            this.output_script = null;
+        }
+
 
         this.indexFieldName = smartMappers.mapper().names().indexName();
         this.fieldDataType = smartMappers.mapper().fieldDataType();
@@ -209,7 +221,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         }
         
         // TODO
-        throw new UnsupportedOperationException("Large facet sizes are not yet implemented by HashedStringFacet");
+        throw new UnsupportedOperationException("Large facet sizes (> 5000) are not yet implemented by HashedStringFacet");
 
 //        BoundedTreeSet<InternalStringTermsFacet.StringEntry> ordered = new BoundedTreeSet<InternalStringTermsFacet.StringEntry>(comparatorType.comparator(), size);
 //
@@ -262,9 +274,20 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     	int readerIndex = context.searcher().readerIndex(docId);
         IndexReader subReader = context.searcher().subReaders()[readerIndex];
         int subDoc = docId - context.searcher().docStarts()[readerIndex];
-        context.lookup().setNextReader(subReader);
-        context.lookup().setNextDocId(subDoc);
-        return (String)context.lookup().source().extractValue(this.indexFieldName);
+        if (output_script == null) {
+            context.lookup().setNextReader(subReader);
+            context.lookup().setNextDocId(subDoc);
+        	return (String)context.lookup().source().extractValue(this.indexFieldName);
+        }
+        else {
+        	output_script.setNextReader(subReader);
+        	output_script.setNextDocId(subDoc);
+
+            Object value;
+            value = output_script.run();
+            value = output_script.unwrap(value);
+            return value.toString();
+        }
     }
    
 

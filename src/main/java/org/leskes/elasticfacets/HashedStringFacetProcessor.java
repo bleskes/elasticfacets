@@ -2,6 +2,7 @@ package org.leskes.elasticfacets;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.component.AbstractComponent;
@@ -35,6 +36,11 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
         String field = null;
         int size = 10;
         boolean allTerms = false;
+        String output_scriptLang = null;
+        String output_script = null;
+        Map<String, Object> params = null;
+
+
 
         ImmutableSet<Integer> excluded = ImmutableSet.of();
         TermsFacet.ComparatorType comparatorType = TermsFacet.ComparatorType.COUNT;
@@ -61,11 +67,19 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
                     allTerms = parser.booleanValue();
                 } else if ("order".equals(currentFieldName) || "comparator".equals(currentFieldName)) {
                     comparatorType = TermsFacet.ComparatorType.fromString(parser.text());
+                } else if ("output_script".equals(currentFieldName)) {
+                	output_script = parser.text();
+                } else if ("lang".equals(currentFieldName)) {
+                	output_scriptLang = parser.text();
+                } else if (token == XContentParser.Token.START_OBJECT) {
+	                if ("params".equals(currentFieldName)) {
+	                    params = parser.map();
+	                }
                 }
             }
         }
 
-        return new HashedStringFacetCollector(facetName, field, size, comparatorType,allTerms,excluded, context);
+        return new HashedStringFacetCollector(facetName, field, size, comparatorType,allTerms,excluded,output_script,output_scriptLang,context,params);
     }
 
 	public String[] types() {

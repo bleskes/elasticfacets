@@ -145,9 +145,71 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 		}
 	}
 
-
-
 	
 	
+	@Test
+	public void OutputScriptTest() throws Exception {
+		int facet_size = 10;
+		for (int i = 0; i < numberOfRuns(); i++) {
+			SearchResponse searchResponse = client
+					.prepareSearch()
+					.setSearchType(SearchType.COUNT)
+					.setFacets(
+							String.format("{ \"facet1\": { \"hashed_terms\" : " +
+									"{ \"field\": \"tag\", \"size\": %s ,\"output_script\" : \"_source.tag+'s'\" } } }",
+									facet_size)
+								.getBytes("UTF-8"))
+					.execute().actionGet();
+
+			assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
+
+			TermsFacet facet = searchResponse.facets().facet("facet1");
+			assertThat(facet.name(), equalTo("facet1"));
+			assertThat(facet.entries().size(), equalTo(facet_size));
+			//assertThat(facet.totalCount(),equalTo(documentCount)); 
+			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
+
+			for (int term=maxTermCount()-facet_size+1;term<=maxTermCount();term++) {
+				int facet_pos = maxTermCount()-term;
+				
+				assertThat(facet.entries().get(facet_pos).term(),equalTo(getTerm(term)+"s"));
+				assertThat(facet.entries().get(facet_pos).count(),equalTo(term));
+			}
+		}
+	}
+
+	
+	@Test
+	public void ExcludeTest() throws Exception {
+		// exclude the top most terms
+		for (int i = 0; i < numberOfRuns(); i++) {
+			SearchResponse searchResponse = client
+					.prepareSearch()
+					.setSearchType(SearchType.COUNT)
+					.setFacets(
+							String.format("{ \"facet1\": { \"hashed_terms\" : " +
+									"{ \"field\": \"tag\", \"size\": %s , \"exclude\": [ \"%s\" , \"%s\"] } } }",
+									10,getTerm(maxTermCount()),getTerm(maxTermCount()-1))
+								.getBytes("UTF-8"))
+					.execute().actionGet();
+
+			assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
+
+			TermsFacet facet = searchResponse.facets().facet("facet1");
+			assertThat(facet.name(), equalTo("facet1"));
+			assertThat(facet.entries().size(), equalTo(10));
+			//assertThat(facet.totalCount(),equalTo(documentCount)); 
+			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
+			
+			int maxTermInFacet = maxTermCount()-2;
+
+			for (int term=maxTermInFacet-10+1;term<=maxTermInFacet-2;term++) {
+				int facet_pos = maxTermInFacet-term;
+				
+				assertThat(facet.entries().get(facet_pos).term(),equalTo(getTerm(term)));
+				assertThat(facet.entries().get(facet_pos).count(),equalTo(term));
+			}
+		}
+	}
 
 }
