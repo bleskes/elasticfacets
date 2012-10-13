@@ -19,7 +19,7 @@
 			<id>0.19.9</id>
 			<activation>
 				<property>
-					<name>ES</name>
+					<name>env.ES</name>
 					<value>0.19.9</value>
 				</property>
 			</activation>
@@ -37,7 +37,7 @@
 			<id>0.19.10</id>
 			<activation>
 				<property>
-					<name>ES</name>
+					<name>env.ES</name>
 					<value>0.19.10</value>
 				</property>
 			</activation>
