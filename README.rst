@@ -110,16 +110,16 @@ This will return the top 10 usernames in your index in exactly the same format t
 
 .. [#] As the original string is no longer available at faceting time, these features of the standard term facets are not supported:
 
-      * Regex filtering.
-      * Term Scripts (although there is some control on output - see the extensions section).
-      * Script Field
-      * Term Ordering - alphabetically ordering terms is impossible. 
+   * Regex filtering.
+   * Term Scripts (although there is some control on output - see the extensions section).
+   * Script Field
+   * Term Ordering - alphabetically ordering terms is impossible. 
       
 
-    These features are also not supported, but I have a idea on how to implement them. If you need it, open up a ticket and let me know.
+   These features are also not supported, but I have a idea on how to implement them. If you need it, open up a ticket and let me know.
 
-      * It only works on `not_analyzed` string fields (see `ElasticSearch documentation <http://www.elasticsearch.org/guide/reference/mapping/core-types.html>`_) 
-      * Lists of strings are not supported. 
+   * It only works on `not_analyzed` string fields (see `ElasticSearch documentation <http://www.elasticsearch.org/guide/reference/mapping/core-types.html>`_) 
+   * Lists of strings are not supported. 
 
 Extensions to the standard terms facet
 ``````````````````````````````````````
