@@ -82,6 +82,8 @@ This snippet uses the Terms facet to return the top usernames on a week by week 
 Hashed Strings Facet
 --------------------
 
+** STILL UNDER DEVELOPMENT **
+
 A drop in replacement [#]_ to standrand terms facet but with lower memory signature. Usefull when you 
 want to facet on a string field with many many possible string values. Normally, all these strings will be loaded into memory which take a lot.
 The Hashed Strings Facet only loads the hashes of these strings which considerably reduce its memory signatures. The facet onload loads the strings
