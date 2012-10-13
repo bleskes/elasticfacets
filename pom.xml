@@ -29,7 +29,7 @@
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
 					<version>[0.19.9]</version>
-					<scope>test</scope>
+					<scope>provided</scope>
 				</dependency>
 			</dependencies>
 		</profile>
@@ -47,7 +47,7 @@
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
 					<version>[0.19.10]</version>
-					<scope>test</scope>
+					<scope>provided</scope>
 				</dependency>
 			</dependencies>
 		</profile>
