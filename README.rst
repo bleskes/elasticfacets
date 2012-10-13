@@ -82,8 +82,71 @@ This snippet uses the Terms facet to return the top usernames on a week by week 
 Hashed Strings Facet
 --------------------
 
-A facet that mimicks the standrand terms facet by with lowerer memory signature. Use full when you 
-want to facet on a field with many many possible string values. Of course, that means slightly more IO.
+A drop in replacement [#]_ to standrand terms facet but with lower memory signature. Usefull when you 
+want to facet on a string field with many many possible string values. Normally, all these strings will be loaded into memory which take a lot.
+The Hashed Strings Facet only loads the hashes of these strings which considerably reduce its memory signatures. The facet onload loads the strings
+needed to actually return a response. Of course, that means slightly more IO.
 
--- WORK IN PROGRESS --
+After installing the plugin you can call it as follows:
+
+::
+
+   {
+     "query": {
+       "match_all": {}
+     },
+     "facets": {
+       "facet_name": {
+         "hashed_terms": {
+           "field": "username",
+           "size": 10,
+         }
+       }
+     }
+   }
+
+
+This will return the top 10 usernames in your index in exactly the same format the standard terms facet does.
+
+.. [#] As the original string is no longer available at faceting time, these features of the standard term facets are not supported:
+
+      * Regex filtering.
+      * Term Scripts (although there is some control on output - see the extensions section).
+      * Script Field
+      * Term Ordering - alphabetically ordering terms is impossible. 
+      
+
+    These features are also not supported, but I have a idea on how to implement them. If you need it, open up a ticket and let me know.
+
+      * It only works on `not_analyzed` string fields (see `ElasticSearch documentation <http://www.elasticsearch.org/guide/reference/mapping/core-types.html>`_) 
+      * Lists of strings are not supported. 
+
+Extensions to the standard terms facet
+``````````````````````````````````````
+
+Next to the features offered by the terms facet, the Hashed Strings facet has some extra tricks to it:
+
+::
+
+   {
+     "query": {
+       "match_all": {}
+     },
+     "facets": {
+       "facet_name": {
+         "hashed_terms": {
+           "field": "username",
+           "size": 10,
+           "fetch_size": 20,           # control over the number of terms returned by every shard before aggregation. 
+           "output_script":            # Modify what is outputed via a script.
+               "_source.username+' on '+_source.website" 
+         }
+       }
+     }
+   }
+
+
+
+
+
  
