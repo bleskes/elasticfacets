@@ -60,6 +60,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final int size;
 
+    private int fetch_size;
+
     private final int numberOfShards;
 
     private final int minCount;
@@ -81,12 +83,15 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final ImmutableSet<Integer> excluded;
 
-    public HashedStringFacetCollector(String facetName, String fieldName, int size, TermsFacet.ComparatorType comparatorType, boolean allTerms, 
+
+
+    public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms, 
     								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
     								  Map<String, Object> params) {
         super(facetName);
         this.fieldDataCache = context.fieldDataCache();
         this.size = size;
+        this.fetch_size = fetch_size;
         this.comparatorType = comparatorType;
         this.numberOfShards = context.numberOfShards();
         this.context = context;
@@ -173,10 +178,13 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
             }
         }
 
+        // if there is one shard, there will not be a reduce phase, so we must not deliver too much
+        int queue_size = numberOfShards == 1 ? size : fetch_size; 
+
         // YACK, we repeat the same logic, but once with an optimizer priority queue for smaller sizes
-        if (size < EntryPriorityQueue.LIMIT) {
+        if (queue_size < EntryPriorityQueue.LIMIT) {
             // optimize to use priority size
-            EntryPriorityQueue ordered = new EntryPriorityQueue(size, comparatorType.comparator());
+            EntryPriorityQueue ordered = new EntryPriorityQueue(queue_size, comparatorType.comparator());
 
             while (queue.size() > 0) {
                 ReaderAggregator agg = queue.top();

@@ -35,6 +35,7 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
 
         String field = null;
         int size = 10;
+        int fetch_size = -1;
         boolean allTerms = false;
         String output_scriptLang = null;
         String output_script = null;
@@ -63,6 +64,8 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
                     field = parser.text();
                 } else if ("size".equals(currentFieldName)) {
                     size = parser.intValue();
+                } else if ("fetch_size".equals(currentFieldName)) {
+                	fetch_size = parser.intValue();
                 } else if ("all_terms".equals(currentFieldName) || "allTerms".equals(currentFieldName)) {
                     allTerms = parser.booleanValue();
                 } else if ("order".equals(currentFieldName) || "comparator".equals(currentFieldName)) {
@@ -78,8 +81,10 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
                 }
             }
         }
+        
+        if (fetch_size == -1) fetch_size = size;
 
-        return new HashedStringFacetCollector(facetName, field, size, comparatorType,allTerms,excluded,output_script,output_scriptLang,context,params);
+        return new HashedStringFacetCollector(facetName, field, size, fetch_size, comparatorType,allTerms,excluded,output_script,output_scriptLang,context,params);
     }
 
 	public String[] types() {

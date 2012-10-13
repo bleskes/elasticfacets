@@ -3,4 +3,4 @@ jdk:
   - oraclejdk7
   - openjdk7
   - openjdk6
-script: mvn test -P 0.19.9
+script: echo "-------- Running 0.19.9 tests --------"" && mvn test -P 0.19.9 && echo "-------- Running 0.19.10 tests --------" && mvn test -P 0.19.10

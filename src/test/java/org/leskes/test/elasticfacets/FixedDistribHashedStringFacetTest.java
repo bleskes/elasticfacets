@@ -156,8 +156,8 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 					.setSearchType(SearchType.COUNT)
 					.setFacets(
 							String.format("{ \"facet1\": { \"hashed_terms\" : " +
-									"{ \"field\": \"tag\", \"size\": %s ,\"output_script\" : \"_source.tag+'s'\" } } }",
-									facet_size)
+									"{ \"field\": \"tag\", \"size\": %s ,\"fetch_size\" : %s ,\"output_script\" : \"_source.tag+'s'\" } } }",
+									facet_size,maxTermCount())
 								.getBytes("UTF-8"))
 					.execute().actionGet();
 
@@ -182,14 +182,16 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 	@Test
 	public void ExcludeTest() throws Exception {
 		// exclude the top most terms
+		int facet_size = 10;
+
 		for (int i = 0; i < numberOfRuns(); i++) {
 			SearchResponse searchResponse = client
 					.prepareSearch()
 					.setSearchType(SearchType.COUNT)
 					.setFacets(
 							String.format("{ \"facet1\": { \"hashed_terms\" : " +
-									"{ \"field\": \"tag\", \"size\": %s , \"exclude\": [ \"%s\" , \"%s\"] } } }",
-									10,getTerm(maxTermCount()),getTerm(maxTermCount()-1))
+									"{ \"field\": \"tag\", \"size\": %s,\"fetch_size\" : %s , \"exclude\": [ \"%s\" , \"%s\"] } } }",
+									facet_size,maxTermCount(), getTerm(maxTermCount()),getTerm(maxTermCount()-1))
 								.getBytes("UTF-8"))
 					.execute().actionGet();
 
@@ -197,13 +199,13 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 
 			TermsFacet facet = searchResponse.facets().facet("facet1");
 			assertThat(facet.name(), equalTo("facet1"));
-			assertThat(facet.entries().size(), equalTo(10));
+			assertThat(facet.entries().size(), equalTo(facet_size));
 			//assertThat(facet.totalCount(),equalTo(documentCount)); 
 			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
 			
 			int maxTermInFacet = maxTermCount()-2;
 
-			for (int term=maxTermInFacet-10+1;term<=maxTermInFacet-2;term++) {
+			for (int term=maxTermInFacet-facet_size+1;term<=maxTermInFacet-2;term++) {
 				int facet_pos = maxTermInFacet-term;
 				
 				assertThat(facet.entries().get(facet_pos).term(),equalTo(getTerm(term)));
