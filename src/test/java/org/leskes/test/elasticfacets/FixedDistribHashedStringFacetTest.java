@@ -24,8 +24,8 @@ import org.testng.annotations.Test;
  */
 public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 
-	private Client client;
-	private long documentCount =0;
+	protected Client client;
+	protected long documentCount =0;
 	
 	final static ESLogger logger = Loggers
 			.getLogger(FixedDistribHashedStringFacetTest.class);
@@ -50,6 +50,13 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 		client.admin().cluster().prepareHealth().setWaitForGreenStatus()
 				.execute().actionGet();
 		
+		loadData();
+		
+		client.admin().indices().prepareRefresh().execute().actionGet();
+
+	}
+
+	protected void loadData() {
 		int max_term_count = maxTermCount();
 		
 		client.prepareIndex("test", "type1")
@@ -67,9 +74,6 @@ public class FixedDistribHashedStringFacetTest extends AbstractNodesTests {
 				documentCount++;
 			}
 		}
-		
-		client.admin().indices().prepareRefresh().execute().actionGet();
-
 	}
 	
 	protected String getTerm(int i) {

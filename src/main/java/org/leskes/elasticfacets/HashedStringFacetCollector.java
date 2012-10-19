@@ -6,6 +6,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
+import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.bytes.BytesArray;
@@ -269,7 +270,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     }
 
     private StringEntry convertHashEntryToStringEntry(HashedStringEntry hashedEntry) {
-    	String term = getTermFromDoc(hashedEntry.docId);
+    	String term = getTermFromDoc(hashedEntry.docId,hashedEntry.termHash);
     	logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
     			term,hashedEntry.termHash,HashedStringFieldType.hashCode(term),hashedEntry.count(),hashedEntry.docId);
     	return new StringEntry(term, hashedEntry.count());
@@ -278,14 +279,25 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     
     
     // Stolen for FetchPhase execute. Watch out for changes there
-    private String getTermFromDoc(int docId) {
+    private String getTermFromDoc(int docId,int termHash) {
     	int readerIndex = context.searcher().readerIndex(docId);
         IndexReader subReader = context.searcher().subReaders()[readerIndex];
         int subDoc = docId - context.searcher().docStarts()[readerIndex];
         if (output_script == null) {
             context.lookup().setNextReader(subReader);
             context.lookup().setNextDocId(subDoc);
-        	return (String)context.lookup().source().extractValue(this.indexFieldName);
+        	Object value = context.lookup().source().extractValue(this.indexFieldName);
+        	if (value instanceof ArrayList<?>) {
+        		for (Object v : (ArrayList<?>)value) {
+        			String candidate = v.toString();
+        			if (termHash == HashedStringFieldType.hashCode(candidate))
+        				return candidate;
+        		}
+        		throw new ElasticSearchIllegalStateException("Failed to find hash code "+termHash+" in an array of docId "+docId);
+        	}
+        	else 
+        		return value.toString();
+        	
         }
         else {
         	output_script.setNextReader(subReader);
