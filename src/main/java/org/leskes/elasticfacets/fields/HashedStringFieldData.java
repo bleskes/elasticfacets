@@ -6,6 +6,8 @@ import java.util.Comparator;
 
 import org.apache.lucene.index.IndexReader;
 import org.elasticsearch.common.RamUsage;
+import org.elasticsearch.common.logging.ESLogger;
+import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.trove.list.array.TIntArrayList;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
@@ -18,16 +20,36 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
 	public static final HashedStringFieldType HASHED_STRING = new HashedStringFieldType();
 	
+	protected ESLogger logger = Loggers.getLogger(getClass());
+	
     protected final int[] values;
+    
+    protected int collisions;
 
     protected HashedStringFieldData(String fieldName, int[] values) {
         super(fieldName);
         this.values = values;
+        if (values.length == 0)
+        	collisions = 0;
+        else {
+        	int prv = values[0];
+        	for (int i=1;i<values.length;i++){
+        		if (values[i]==prv) collisions++;
+        		prv = values[i];
+        	}
+        }
+        
+        if (collisions > 0) 
+        	logger.warn("HashedStringFieldData intialized, but with {} collisions. Total value count: {}",collisions,values.length);
     }
     
     public int[] values() {
     	return values;
     }
+    public int collisions() {
+		return collisions;
+	}
+
 
     @Override
     protected long computeSizeInBytes() {

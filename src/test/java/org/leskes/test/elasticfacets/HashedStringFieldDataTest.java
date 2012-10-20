@@ -1,13 +1,18 @@
 package org.leskes.test.elasticfacets;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.apache.lucene.analysis.miscellaneous.PatternAnalyzer;
+import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.Version;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.common.trove.list.array.TIntArrayList;
@@ -88,6 +93,8 @@ public class HashedStringFieldDataTest {
 
 		assert (sFieldData.fieldName().equals("svalue"));
 		assert (!sFieldData.multiValued());
+		assertThat(sFieldData.collisions(),equalTo(0));
+
 
 		assertHash("zzz", sFieldData.hashValue(0));
 		assertFieldWithSet(sFieldData, 0, new String[] { "zzz"});
@@ -102,6 +109,7 @@ public class HashedStringFieldDataTest {
 
 		assertHash("aaa", sFieldData.hashValue(4));
 		assertFieldWithSet(sFieldData, 4, new String[] { "aaa"});
+		
 
 		indexWriter.close();
 	}
@@ -127,6 +135,8 @@ public class HashedStringFieldDataTest {
 
 		assertThat(sFieldData.fieldName(), equalTo("svalue"));
 		assertThat(sFieldData.multiValued(), equalTo(false));
+		assertThat(sFieldData.collisions(),equalTo(0));
+
 
 		int[] sortedValues = Arrays.copyOf(sFieldData.values(),
 				sFieldData.values().length);
@@ -151,6 +161,8 @@ public class HashedStringFieldDataTest {
 
 			values.clear();
 		}
+		
+
 
 		indexWriter.close();
 	}
@@ -180,6 +192,8 @@ public class HashedStringFieldDataTest {
 
 		assert (sFieldData.fieldName().equals("svalue"));
 		assert (sFieldData.multiValued());
+		assertThat(sFieldData.collisions(),equalTo(0));
+
 
 		
 		assertFieldWithSet(sFieldData, 0, new String[] { "zzz","xxx"});
@@ -191,6 +205,31 @@ public class HashedStringFieldDataTest {
 		assertFieldWithSet(sFieldData, 3, new String[] { "aaa" });
 
 		indexWriter.close();
+	}
+	
+	@Test
+	public void TestMultiValueCollisionDetection() throws Exception {
+		Directory dir = new RAMDirectory();
+		IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(
+				Lucene.VERSION, new PatternAnalyzer(Version.LUCENE_36, PatternAnalyzer.NON_WORD_PATTERN, false, null)));
+
+		indexWriter.addDocument(DocumentBuilder.doc()
+				.add(DocumentBuilder.field("svalue", "FB"))
+				.add(DocumentBuilder.field("svalue", "Ea")).build());
+
+		indexWriter.addDocument(DocumentBuilder.doc()
+				.add(DocumentBuilder.field("svalue", "BB"))
+				.add(DocumentBuilder.field("svalue", "Aa")).build());
+
+		
+		IndexReader reader = IndexReader.open(indexWriter, true);
+
+		MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
+				.load(reader, "svalue");
+		
+		assertThat(sFieldData.collisions(),equalTo(2));
+		indexWriter.close();
+
 	}
 
 	protected int getDocHashes(int docId, HashedStringFieldData sFieldData,
