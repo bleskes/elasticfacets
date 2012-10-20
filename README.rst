@@ -121,7 +121,6 @@ This will return the top 10 usernames in your index in exactly the same format t
    These features are also not supported, but I have a idea on how to implement them. If you need it, open up a ticket and let me know.
 
    * It only works on `not_analyzed` string fields (see `ElasticSearch documentation <http://www.elasticsearch.org/guide/reference/mapping/core-types.html>`_) 
-   * Lists of strings are not supported. 
 
 Extensions to the standard terms facet
 ``````````````````````````````````````
