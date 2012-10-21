@@ -5,6 +5,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 
+import java.io.IOException;
+
+import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
@@ -20,68 +23,13 @@ import org.testng.annotations.Test;
 /**
  *
  */
-public class SimpleHashedStringFacetTest extends AbstractNodesTests {
+public class SimpleHashedStringFacetTest extends HashedStringFacetTest {
 
 	private Client client;
 
-	@BeforeClass
-	public void createNodes() throws Exception {
-		Settings settings = ImmutableSettings.settingsBuilder()
-				.put("index.number_of_shards", numberOfShards())
-				.put("index.number_of_replicas", 0).build();
-		for (int i = 0; i < numberOfNodes(); i++) {
-			startNode("node" + i, settings);
-		}
-		client = getClient();
-	}
-
-	protected int numberOfShards() {
-		return 1;
-	}
-
-	protected int numberOfNodes() {
-		return 1;
-	}
-
-	protected int numberOfRuns() {
-		return 5;
-	}
-
-	@AfterClass
-	public void closeNodes() {
-		client.close();
-		closeAllNodes();
-	}
-
-	protected Client getClient() {
-		return client("node0");
-	}
-
+	
 	@Test
 	public void SimpleHashStringFacet() throws Exception {
-		try {
-			client.admin().indices().prepareDelete("test").execute()
-					.actionGet();
-		} catch (Exception e) {
-			// ignore
-		}
-		client.admin().indices().prepareCreate("test").execute().actionGet();
-		client.admin().cluster().prepareHealth().setWaitForGreenStatus()
-				.execute().actionGet();
-
-		client.prepareIndex("test", "type1")
-				.setSource(
-						jsonBuilder().startObject().field("tag", "green")
-								.endObject()).execute().actionGet();
-		client.admin().indices().prepareFlush().setRefresh(true).execute()
-				.actionGet();
-
-		client.prepareIndex("test", "type1")
-				.setSource(
-						jsonBuilder().startObject().field("tag", "blue")
-								.endObject()).execute().actionGet();
-
-		client.admin().indices().prepareRefresh().execute().actionGet();
 
 		for (int i = 0; i < numberOfRuns(); i++) {
 			SearchResponse searchResponse = client
@@ -107,6 +55,26 @@ public class SimpleHashedStringFacetTest extends AbstractNodesTests {
 					anyOf(equalTo("green"), equalTo("blue")));
 			assertThat(facet.entries().get(1).count(), equalTo(1));
 		}
+	}
+
+
+	@Override
+	protected void loadData() throws Exception  {
+	
+		client.prepareIndex("test", "type1")
+				.setSource(
+						jsonBuilder().startObject().field("tag", "green")
+								.endObject()).execute().actionGet();
+		client.admin().indices().prepareFlush().setRefresh(true).execute()
+				.actionGet();
+
+		client.prepareIndex("test", "type1")
+				.setSource(
+						jsonBuilder().startObject().field("tag", "blue")
+								.endObject()).execute().actionGet();
+
+		client.admin().indices().prepareRefresh().execute().actionGet();
+
 	}
 
 }

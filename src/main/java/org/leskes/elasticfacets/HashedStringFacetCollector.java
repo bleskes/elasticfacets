@@ -1,19 +1,28 @@
 
 package org.leskes.elasticfacets;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.ElasticSearchIllegalStateException;
+import org.elasticsearch.action.admin.indices.analyze.AnalyzeResponse;
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.collect.BoundedTreeSet;
 import org.elasticsearch.common.collect.ImmutableSet;
+import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
+import org.elasticsearch.common.lucene.Lucene;
 import org.elasticsearch.common.lucene.document.ResetFieldSelector;
 import org.elasticsearch.index.cache.field.data.FieldDataCache;
 import org.elasticsearch.index.field.data.FieldData;
@@ -57,6 +66,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final String indexFieldName;
 
+    private Analyzer fieldIndexAnalyzer;
+
     private final TermsFacet.ComparatorType comparatorType;
 
     private final int size;
@@ -84,6 +95,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final ImmutableSet<Integer> excluded;
 
+
+	
 
 
     public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms, 
@@ -124,6 +137,11 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
         this.indexFieldName = smartMappers.mapper().names().indexName();
         this.fieldDataType = smartMappers.mapper().fieldDataType();
+        
+        
+        this.fieldIndexAnalyzer = smartMappers.mapper().indexAnalyzer();
+        if (this.fieldIndexAnalyzer == null &&  smartMappers.docMapper() != null) this.fieldIndexAnalyzer = smartMappers.docMapper().indexAnalyzer() ;
+        if (this.fieldIndexAnalyzer == null ) this.fieldIndexAnalyzer = Lucene.STANDARD_ANALYZER;
 
         if (excluded == null || excluded.isEmpty()) {
             this.excluded = null;
@@ -271,8 +289,9 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private StringEntry convertHashEntryToStringEntry(HashedStringEntry hashedEntry) {
     	String term = getTermFromDoc(hashedEntry.docId,hashedEntry.termHash);
-    	logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
-    			term,hashedEntry.termHash,HashedStringFieldType.hashCode(term),hashedEntry.count(),hashedEntry.docId);
+    	if (logger.isTraceEnabled())
+    		logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
+    				term,hashedEntry.termHash,HashedStringFieldType.hashCode(term),hashedEntry.count(),hashedEntry.docId);
     	return new StringEntry(term, hashedEntry.count());
 		
 	}
@@ -286,18 +305,22 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         if (output_script == null) {
             context.lookup().setNextReader(subReader);
             context.lookup().setNextDocId(subDoc);
+            String candidate;
         	Object value = context.lookup().source().extractValue(this.indexFieldName);
         	if (value instanceof ArrayList<?>) {
         		for (Object v : (ArrayList<?>)value) {
-        			String candidate = v.toString();
-        			if (termHash == HashedStringFieldType.hashCode(candidate))
+        			candidate = analyzeStringForTerm(v.toString(),termHash);
+        			if (candidate != null)
         				return candidate;
         		}
-        		throw new ElasticSearchIllegalStateException("Failed to find hash code "+termHash+" in an array of docId "+docId);
         	}
-        	else 
-        		return value.toString();
+        	else {
+        		candidate =  analyzeStringForTerm(value.toString(),termHash);
+    			if (candidate != null)
+    				return candidate;
+        	}
         	
+    		throw new ElasticSearchIllegalStateException("Failed to find hash code "+termHash+" in an array of docId "+docId);
         }
         else {
         	output_script.setNextReader(subReader);
@@ -308,6 +331,44 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
             value = output_script.unwrap(value);
             return value.toString();
         }
+    }
+    
+    private String analyzeStringForTerm(String fieldValue,int termHash) {
+        TokenStream stream = null;
+        if (HashedStringFieldType.hashCode(fieldValue) == termHash) 
+        	return fieldValue; // you never know :)
+        
+        String ret = null;
+        try {
+            stream = fieldIndexAnalyzer.reusableTokenStream(indexFieldName, new FastStringReader(fieldValue));
+            stream.reset();
+            CharTermAttribute term = stream.addAttribute(CharTermAttribute.class);
+//            PositionIncrementAttribute posIncr = stream.addAttribute(PositionIncrementAttribute.class);
+//            OffsetAttribute offset = stream.addAttribute(OffsetAttribute.class);
+//            TypeAttribute type = stream.addAttribute(TypeAttribute.class);
+
+            while (stream.incrementToken()) {
+                ret = term.toString();
+                logger.trace("Considering {} for hash code {}",ret,termHash);
+                if (HashedStringFieldType.hashCode(ret) == termHash) {
+                	logger.trace("Matched!");
+                	break;
+                }
+            	ret = null;
+            }
+            stream.end();
+        } catch (IOException e) {
+            throw new ElasticSearchException("failed to analyze", e);
+        } finally {
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+        return ret;
     }
    
 
