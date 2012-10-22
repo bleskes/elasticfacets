@@ -5,6 +5,7 @@ jdk:
   - openjdk6
 
 env:
+  - ES=0.20.0
   - ES=0.19.10
   - ES=0.19.9
   
