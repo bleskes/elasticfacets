@@ -25,8 +25,7 @@ import org.testng.annotations.Test;
  */
 public class SimpleHashedStringFacetTest extends HashedStringFacetTest {
 
-	private Client client;
-
+	
 	
 	@Test
 	public void SimpleHashStringFacet() throws Exception {
