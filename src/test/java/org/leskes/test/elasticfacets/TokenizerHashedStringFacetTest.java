@@ -16,7 +16,7 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.testng.annotations.Test;
 
-public class TokenizerHashedStringFacetTest extends HashedStringFacetTest {
+public class TokenizerHashedStringFacetTest extends AbstractFacetTest {
 
 	@Override
 	protected void loadData() throws Exception {

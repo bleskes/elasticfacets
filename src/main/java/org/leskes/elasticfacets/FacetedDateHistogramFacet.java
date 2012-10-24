@@ -10,6 +10,7 @@ import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.FacetCollector;
 import org.elasticsearch.search.facet.FacetProcessors;
+import org.elasticsearch.search.facet.datehistogram.DateHistogramFacet.ComparatorType;
 import org.elasticsearch.search.facet.datehistogram.InternalDateHistogramFacet;
 import org.elasticsearch.search.facet.datehistogram.DateHistogramFacet.Entry;
 import org.elasticsearch.search.facet.datehistogram.InternalFullDateHistogramFacet.FullEntry;
@@ -73,8 +74,8 @@ public class FacetedDateHistogramFacet implements InternalFacet {
      * A histogram entry representing a single entry within the result of a histogram facet.
      */
     public static class Entry extends EntryBase {
-        public InternalFacet internalFacet; 
-        public FacetCollector collector;
+        protected InternalFacet internalFacet; 
+        protected FacetCollector collector;
 
         public Entry(long time, FacetCollector collector) {
         	super(time);
@@ -88,6 +89,10 @@ public class FacetedDateHistogramFacet implements InternalFacet {
         public void facetize() {
         	this.internalFacet = (InternalFacet)collector.facet();
         	this.collector = null;
+        }
+        
+        public Facet facet() {
+        	return internalFacet;
         }
 
     }
@@ -111,7 +116,8 @@ public class FacetedDateHistogramFacet implements InternalFacet {
     protected ExtTLongObjectHashMap<Entry> entries;
     
     protected List<Entry> entriesAsList;
-    
+
+
 
     public List<Entry> collapseToAList() {
         if (!(entriesAsList instanceof List)) {

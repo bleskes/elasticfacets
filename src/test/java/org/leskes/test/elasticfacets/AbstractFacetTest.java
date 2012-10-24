@@ -11,7 +11,7 @@ import org.leskes.test.elasticfacets.utils.AbstractNodesTests;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 
-public abstract class HashedStringFacetTest extends AbstractNodesTests {
+public abstract class AbstractFacetTest extends AbstractNodesTests {
 	protected Client client;
 	protected long documentCount =0;
 	

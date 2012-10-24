@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 /**
  *
  */
-public class FixedDistribHashedStringFacetTest extends HashedStringFacetTest {
+public class FixedDistribHashedStringFacetTest extends AbstractFacetTest {
 	
 	protected void loadData() {
 		int max_term_count = maxTermCount();

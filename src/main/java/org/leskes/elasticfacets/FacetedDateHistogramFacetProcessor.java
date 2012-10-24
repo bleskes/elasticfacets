@@ -81,11 +81,11 @@ public class FacetedDateHistogramFacetProcessor extends AbstractComponent implem
         DateTimeZone preZone = DateTimeZone.UTC;
         DateTimeZone postZone = DateTimeZone.UTC;
         boolean preZoneAdjustLargeInterval = false;
-        int offsetHours = 1;//default offset for Amsterdam
         long preOffset = 0;
         long postOffset = 0;
         float factor = 1.0f;
-        
+        Chronology chronology = ISOChronology.getInstanceUTC();
+
         FacetProcessor internalProcessor = null; 
         byte[] internalConfig = null;
         
@@ -142,16 +142,11 @@ public class FacetedDateHistogramFacetProcessor extends AbstractComponent implem
                     postOffset = parseOffset(parser.text());
                 } else if ("factor".equals(fieldName)) {
                     factor = parser.floatValue();
-                } else if ("offset_hours".equals(fieldName) || "offsetHours".equals(fieldName)) {
-                	offsetHours = Integer.parseInt(parser.text());
                 }
-                
             }
         }
         
-        Chronology chronology = ISOChronology.getInstance(DateTimeZone.forOffsetHours(offsetHours));
-        
-
+       
         if (keyField == null) {
             throw new FacetPhaseExecutionException(facetName, "key field is required to be set for histogram facet, either using [field] or using [key_field]");
         }
@@ -189,7 +184,8 @@ public class FacetedDateHistogramFacetProcessor extends AbstractComponent implem
                 .preOffset(preOffset).postOffset(postOffset)
                 .factor(factor)
                 .build();
-		
+        
+        
         
         return new FacetedDateHistogramCollector(facetName, keyField, tzRounding, internalProcessor,internalConfig,context);
        

@@ -23,7 +23,7 @@ import org.testng.annotations.Test;
 /**
  *
  */
-public class SimpleHashedStringFacetTest extends HashedStringFacetTest {
+public class SimpleHashedStringFacetTest extends AbstractFacetTest {
 
 	
 	
