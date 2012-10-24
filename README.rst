@@ -119,10 +119,6 @@ This will return the top 10 usernames in your index in exactly the same format t
    * Term Ordering - alphabetically ordering terms is impossible. 
       
 
-   These features are also not supported, but I have a idea on how to implement them. If you need it, open up a ticket and let me know.
-
-   * It only works on `not_analyzed` string fields (see `ElasticSearch documentation <http://www.elasticsearch.org/guide/reference/mapping/core-types.html>`_) 
-
 Extensions to the standard terms facet
 ``````````````````````````````````````
 
