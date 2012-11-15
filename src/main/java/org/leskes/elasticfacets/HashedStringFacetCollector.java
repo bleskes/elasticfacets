@@ -79,10 +79,6 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final ImmutableSet<Integer> excluded;
 
-
-	
-
-
     public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms, 
     								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
     								  Map<String, Object> params) {
