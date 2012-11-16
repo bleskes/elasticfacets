@@ -6,4 +6,9 @@ public class MultiNodeCacheStatsPerFieldTest extends CacheStatsPerFieldTest {
         return 3;
     }
 
+    protected int numberOfShards() {
+        return 3;
+    }
+
+
 }

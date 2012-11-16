@@ -48,7 +48,7 @@ public class CacheStatsPerFieldStats extends NodeOperationResponse {
         if (in.readBoolean()) {
             hostname = in.readString();
         }
-        int size = in.readInt();
+        int size = in.readVInt();
         fieldSizes = new ArrayList<FieldEntry>(size);
         for(int i=0;i<size;i++) {
             FieldEntry e = new FieldEntry(in.readString(),in.readVLong());

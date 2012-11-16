@@ -55,16 +55,15 @@ public class CacheStatsPerFieldTest extends AbstractNodesTests {
                 .execute().actionGet();
 
 
-        for (int i=0;i<10;i++) {
+        for (int i=0;i<100;i++) {
             client.prepareIndex("test", "type1")
                     .setSource(
                             jsonBuilder().startObject().field("tag", "tag" + i)
                                     .endObject()).execute().actionGet();
-            client.admin().indices().prepareFlush().setRefresh(true).execute()
-                    .actionGet();
-
             documentCount++;
         }
+        client.admin().indices().prepareFlush().setRefresh(true).execute()
+                .actionGet();
 
     }
 
