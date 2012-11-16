@@ -1,24 +1,13 @@
-package org.leskes.test.elasticfacets;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.equalToIgnoringCase;
+package org.leskes.test.elasticfacets.facets;
 
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.search.facet.terms.TermsFacet;
-import org.leskes.elasticfacets.HashedStringFacetProcessor;
-import org.leskes.elasticfacets.fields.HashedStringFieldType;
-import org.leskes.test.elasticfacets.utils.AbstractNodesTests;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.equalToIgnoringCase;
 
 /**
  *

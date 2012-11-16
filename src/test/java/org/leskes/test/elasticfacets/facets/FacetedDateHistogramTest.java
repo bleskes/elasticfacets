@@ -1,21 +1,17 @@
-package org.leskes.test.elasticfacets;
+package org.leskes.test.elasticfacets.facets;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.equalTo;
-
-import java.io.UnsupportedEncodingException;
-import java.util.List;
-
-import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.leskes.elasticfacets.FacetedDateHistogramFacet;
 import org.leskes.elasticfacets.FacetedDateHistogramFacet.Entry;
 import org.testng.annotations.Test;
+
+import java.util.List;
+
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 public class FacetedDateHistogramTest extends AbstractFacetTest {
 
