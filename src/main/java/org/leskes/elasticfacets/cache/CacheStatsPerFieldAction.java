@@ -28,7 +28,7 @@ public class CacheStatsPerFieldAction extends ClusterAction<CacheStatsPerFieldRe
         CacheStatsPerFieldResponse, CacheStatsPerFieldRequestBuilder> {
 
     public static final CacheStatsPerFieldAction INSTANCE = new CacheStatsPerFieldAction();
-    public static final String NAME = "cluster/nodes/cache/fields";
+    public static final String NAME = "cluster/nodes/cache/fields/stats";
 
     private CacheStatsPerFieldAction() {
         super(NAME);

@@ -123,6 +123,7 @@ public class CacheStatsPerFieldTest extends AbstractNodesTests {
 
     @Test
     public void TestJSONResponse() throws Exception {
+
         facetOnTags();
 
         CacheStatsPerFieldResponse r = client.admin().cluster()
