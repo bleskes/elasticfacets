@@ -52,7 +52,7 @@
 			</dependencies>
 		</profile>
         <profile>
-            <id>0.19.10</id>
+            <id>0.19.11</id>
             <activation>
                 <property>
                     <name>env.ES</name>
