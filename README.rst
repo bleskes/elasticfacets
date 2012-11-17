@@ -147,7 +147,9 @@ Other Goodies
 =============
 
 Cache stats per field
-`````````````````````
+---------------------
+
+** STILL UNDER DEVELOPMENT. Available in master only **
 
 Facets in ElasticSearch are powered by the FieldCache - a component that loads values into memory so they could be counted.
 This can potentially lead to high memory usage. ElasticSearch comes with a cache statistics end point from which you can
@@ -174,7 +176,7 @@ Respones:
     "nodes": {
         "node_id": {
           "timestamp": 1353134666971
-          "name": Frost, Deacon
+          "name": "Frost, Deacon"
           "transport_address": "inet[/192.168.1.107:9300]"
           "hostname": "something.com"
           "fields": {
