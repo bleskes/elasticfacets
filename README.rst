@@ -2,7 +2,7 @@
 Elastic Facets 
 ==============
 
-A collection of facets (ehm, one at the moment) for ElasticSearch.
+A collection of facets and facet-related tools for ElasticSearch.
 
 .. image:: https://travis-ci.org/bleskes/elasticfacets.png
    :alt: build status
@@ -143,8 +143,51 @@ Next to the features offered by the terms facet, the Hashed Strings facet has so
      }
    }
 
+Other Goodies
+=============
+
+Cache stats per field
+`````````````````````
+
+Facets in ElasticSearch are powered by the FieldCache - a component that loads values into memory so they could be counted.
+This can potentially lead to high memory usage. ElasticSearch comes with a cache statistics end point from which you can
+get the current ***total*** cache size. This end points tells what is the cache size per field stored in it so you can find
+the source of the problem. 
+
+Usage:
+
+::
+
+  curl -XGET 'http://localhost:9200/_cluster/nodes/cache/fields/stats
+  curl -XGET 'http://localhost:9200/_cluster/nodes/nodeId1,nodeId2/cache/fields/stats'
+
+  # simplified
+  curl -XGET 'http://localhost:9200/_nodes/cache/fields/stats'
 
 
+Respones:
+
+::
+
+  {
+  "cluster_name": "BoazMBP.local_buzzcapture_1.0"
+    "nodes": {
+        "node_id": {
+          "timestamp": 1353134666971
+          "name": Frost, Deacon
+          "transport_address": "inet[/192.168.1.107:9300]"
+          "hostname": "something.com"
+          "fields": {
+            "publish_date": {
+              "size": 180
+            }
+            "copies": {
+              "size": 180
+            }
+          }
+        }
+     }
+  }
 
 
  
