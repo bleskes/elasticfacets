@@ -66,7 +66,7 @@ public class CacheStatsPerFieldResponse extends NodesOperationResponse<CacheStat
         for (CacheStatsPerFieldStats nodeFieldStats : this) {
             builder.startObject(nodeFieldStats.node().id(), XContentBuilder.FieldCaseConversion.NONE);
 
-            builder.field("setTimestamp", nodeFieldStats.timestamp());
+            builder.field("timestamps", nodeFieldStats.timestamp());
             builder.field("name", nodeFieldStats.node().name(), XContentBuilder.FieldCaseConversion.NONE);
             builder.field("transport_address", nodeFieldStats.node().address().toString());
             if (nodeFieldStats.hostname() != null) {
