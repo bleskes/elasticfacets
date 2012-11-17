@@ -2,7 +2,7 @@
 Elastic Facets 
 ==============
 
-A collection of facets and facet-related tools for ElasticSearch.
+A collection of facets_ and facet-related tools_ for ElasticSearch.
 
 .. image:: https://travis-ci.org/bleskes/elasticfacets.png
    :alt: build status
@@ -24,6 +24,8 @@ Versions
     0.1             0.19.8
     =============   =============            
     
+.. _facets:  
+
 Included facets
 ===============
 
@@ -142,6 +144,9 @@ Next to the features offered by the terms facet, the Hashed Strings facet has so
        }
      }
    }
+
+
+.. _tools:
 
 Other Goodies
 =============
