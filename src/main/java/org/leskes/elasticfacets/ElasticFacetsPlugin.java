@@ -1,10 +1,15 @@
 package org.leskes.elasticfacets;
 
+import org.elasticsearch.action.ActionModule;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.rest.RestModule;
 import org.elasticsearch.search.facet.FacetModule;
+import org.leskes.elasticfacets.cache.CacheStatsPerFieldAction;
+import org.leskes.elasticfacets.cache.RestCacheStatsPerFieldAction;
+import org.leskes.elasticfacets.cache.TransportCacheStatsPerFieldAction;
 
 
 public class ElasticFacetsPlugin extends AbstractPlugin  {
@@ -30,6 +35,12 @@ public class ElasticFacetsPlugin extends AbstractPlugin  {
 	    	((FacetModule)module).addFacetProcessor(FacetedDateHistogramFacetProcessor.class);
 	    	((FacetModule)module).addFacetProcessor(HashedStringFacetProcessor.class);
 		}
+        if (module instanceof ActionModule) {
+            ((ActionModule)module).registerAction(CacheStatsPerFieldAction.INSTANCE, TransportCacheStatsPerFieldAction.class);
+        }
+        if (module instanceof RestModule) {
+            ((RestModule)module).addRestAction(RestCacheStatsPerFieldAction.class);
+        }
     }
 
 }

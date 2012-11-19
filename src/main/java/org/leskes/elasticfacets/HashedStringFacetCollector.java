@@ -4,33 +4,22 @@ package org.leskes.elasticfacets;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
-import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
 import org.elasticsearch.ElasticSearchIllegalStateException;
-import org.elasticsearch.action.admin.indices.analyze.AnalyzeResponse;
 import org.elasticsearch.common.CacheRecycler;
-import org.elasticsearch.common.Nullable;
-import org.elasticsearch.common.bytes.BytesArray;
-import org.elasticsearch.common.collect.BoundedTreeSet;
 import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.Lucene;
-import org.elasticsearch.common.lucene.document.ResetFieldSelector;
 import org.elasticsearch.index.cache.field.data.FieldDataCache;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
-import org.elasticsearch.index.field.data.strings.StringFieldData;
 import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.script.SearchScript;
-import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.facet.AbstractFacetCollector;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.terms.TermsFacet;
@@ -38,8 +27,6 @@ import org.elasticsearch.search.facet.terms.TermsFacet.Entry;
 import org.elasticsearch.search.facet.terms.strings.InternalStringTermsFacet;
 import org.elasticsearch.search.facet.terms.strings.InternalStringTermsFacet.StringEntry;
 import org.elasticsearch.search.facet.terms.support.EntryPriorityQueue;
-import org.elasticsearch.search.fetch.FetchPhaseExecutionException;
-import org.elasticsearch.search.internal.InternalSearchHitField;
 import org.elasticsearch.search.internal.SearchContext;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
@@ -47,11 +34,8 @@ import org.leskes.elasticfacets.fields.HashedStringFieldType;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  *
@@ -94,10 +78,6 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     long total;
 
     private final ImmutableSet<Integer> excluded;
-
-
-	
-
 
     public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms, 
     								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
@@ -309,18 +289,21 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         	Object value = context.lookup().source().extractValue(this.indexFieldName);
         	if (value instanceof ArrayList<?>) {
         		for (Object v : (ArrayList<?>)value) {
+                    if (v == null) continue;
         			candidate = analyzeStringForTerm(v.toString(),termHash);
         			if (candidate != null)
         				return candidate;
         		}
         	}
-        	else {
+        	else if (value != null) {
         		candidate =  analyzeStringForTerm(value.toString(),termHash);
     			if (candidate != null)
     				return candidate;
         	}
         	
-    		throw new ElasticSearchIllegalStateException("Failed to find hash code "+termHash+" in an array of docId "+docId);
+    		throw new ElasticSearchIllegalStateException(
+                    "Failed to find hash code "+termHash+" in an array of docId "+docId +
+                    ". You can only analyzed stored fields or when you store the original document under _source");
         }
         else {
         	output_script.setNextReader(subReader);

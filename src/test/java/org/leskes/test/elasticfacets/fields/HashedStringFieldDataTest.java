@@ -1,21 +1,14 @@
-package org.leskes.test.elasticfacets;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
+package org.leskes.test.elasticfacets.fields;
 
 import org.apache.lucene.analysis.miscellaneous.PatternAnalyzer;
-import org.apache.lucene.index.CorruptIndexException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.LockObtainFailedException;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
-import org.elasticsearch.common.trove.list.array.TIntArrayList;
 import org.elasticsearch.index.field.data.FieldData.OrdinalInDocProc;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
@@ -23,6 +16,10 @@ import org.leskes.elasticfacets.fields.MultiValueHashedStringFieldData;
 import org.leskes.elasticfacets.fields.SingleValueHashedStringFieldData;
 import org.testng.AssertJUnit;
 import org.testng.annotations.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;

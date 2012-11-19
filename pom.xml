@@ -51,7 +51,25 @@
 				</dependency>
 			</dependencies>
 		</profile>
-		<profile>
+        <profile>
+            <id>0.19.11</id>
+            <activation>
+                <property>
+                    <name>env.ES</name>
+                    <value>0.19.11</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <!-- hard requirement for testing -->
+                    <groupId>org.elasticsearch</groupId>
+                    <artifactId>elasticsearch</artifactId>
+                    <version>[0.19.11]</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
 			<id>0.20.0</id>
 			<activation>
 				<property>

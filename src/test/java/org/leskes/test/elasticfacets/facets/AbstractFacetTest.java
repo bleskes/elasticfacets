@@ -1,4 +1,4 @@
-package org.leskes.test.elasticfacets;
+package org.leskes.test.elasticfacets.facets;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.logging.ESLogger;

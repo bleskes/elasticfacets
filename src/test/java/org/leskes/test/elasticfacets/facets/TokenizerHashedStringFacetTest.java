@@ -1,14 +1,5 @@
-package org.leskes.test.elasticfacets;
+package org.leskes.test.elasticfacets.facets;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.equalTo;
-
-import java.io.IOException;
-
-import org.elasticsearch.ElasticSearchException;
-import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.common.settings.ImmutableSettings.Builder;
@@ -16,12 +7,16 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.testng.annotations.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.equalTo;
+
 public class TokenizerHashedStringFacetTest extends AbstractFacetTest {
 
 	@Override
 	protected void loadData() throws Exception {
 		
-	 PutMappingResponse r=	client.admin().indices().preparePutMapping("test").setType("type1").setSource("{\"type1\":{"+
+	 client.admin().indices().preparePutMapping("test").setType("type1").setSource("{\"type1\":{"+
     "  \"properties\" : {          "+
     "       \"tag\" : {\"type\" : \"string\", \"analyzer\" : \"hsf_analyzer\"} "+
     "    } "+
