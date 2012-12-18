@@ -22,17 +22,17 @@ public class CacheStatsPerFieldStats extends NodeOperationResponse {
     }
 
     private long timestamp;
-    private List<FieldEntry> fieldSizes;
+    private List<FieldEntry> fieldEntries;
     private String hostname;
 
     CacheStatsPerFieldStats() {
     }
 
-    public CacheStatsPerFieldStats(DiscoveryNode node, String hostname, long timestamp, List<FieldEntry> fieldSizes) {
+    public CacheStatsPerFieldStats(DiscoveryNode node, String hostname, long timestamp, List<FieldEntry> fieldEntries) {
         super(node);
         this.setHostname(hostname);
         this.timestamp = timestamp;
-        this.fieldSizes = fieldSizes;
+        this.fieldEntries = fieldEntries;
     }
 
     public static CacheStatsPerFieldStats readCachePerFieldStats(StreamInput in) throws IOException {
@@ -49,10 +49,10 @@ public class CacheStatsPerFieldStats extends NodeOperationResponse {
             hostname = in.readString();
         }
         int size = in.readVInt();
-        fieldSizes = new ArrayList<FieldEntry>(size);
+        fieldEntries = new ArrayList<FieldEntry>(size);
         for(int i=0;i<size;i++) {
             FieldEntry e = new FieldEntry(in.readString(),in.readVLong());
-            fieldSizes.add(e);
+            fieldEntries.add(e);
         }
     }
 
@@ -66,8 +66,8 @@ public class CacheStatsPerFieldStats extends NodeOperationResponse {
             out.writeBoolean(true);
             out.writeString(hostname);
         }
-        out.writeVInt(fieldSizes.size());
-        for (FieldEntry e: fieldSizes) {
+        out.writeVInt(fieldEntries.size());
+        for (FieldEntry e: fieldEntries) {
             out.writeString(e.fieldName);
             out.writeVLong(e.size);
         }
@@ -81,12 +81,12 @@ public class CacheStatsPerFieldStats extends NodeOperationResponse {
         this.timestamp = timestamp;
     }
 
-    public List<FieldEntry> fieldSizes() {
-        return fieldSizes;
+    public List<FieldEntry> fieldEntries() {
+        return fieldEntries;
     }
 
-    public void setFieldSizes(List<FieldEntry> fieldSizes) {
-        this.fieldSizes = fieldSizes;
+    public void setFieldEntries(List<FieldEntry> fieldEntries) {
+        this.fieldEntries = fieldEntries;
     }
 
     public String hostname() {

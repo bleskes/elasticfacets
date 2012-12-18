@@ -74,7 +74,7 @@ public class CacheStatsPerFieldResponse extends NodesOperationResponse<CacheStat
             }
 
             builder.startObject("fields");
-            for (CacheStatsPerFieldStats.FieldEntry fe : nodeFieldStats.fieldSizes()){
+            for (CacheStatsPerFieldStats.FieldEntry fe : nodeFieldStats.fieldEntries()){
                 builder.startObject(fe.fieldName);
                 builder.field("size",fe.size);
                 builder.endObject();
