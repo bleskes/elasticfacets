@@ -10,6 +10,8 @@ import org.elasticsearch.common.network.NetworkUtils;
 import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,8 +23,9 @@ import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 public abstract class AbstractNodesTests {
 
     protected final ESLogger logger = Loggers.getLogger(getClass());
+   protected Client client;
 
-    private Map<String, Node> nodes = new HashMap<String, Node>();
+   private Map<String, Node> nodes = new HashMap<String, Node>();
 
     private Map<String, Client> clients = new HashMap<String, Client>();
 
@@ -114,4 +117,57 @@ public abstract class AbstractNodesTests {
         }
         nodes.clear();
     }
+
+   @BeforeClass
+   public void createNodes() throws Exception {
+      ImmutableSettings.Builder settingsBuilder = settingsBuilder();
+      configureNodeSettings(settingsBuilder);
+
+      Settings settings = settingsBuilder.build();
+      for (int i = 0; i < numberOfNodes(); i++) {
+         startNode("node" + i, settings);
+      }
+      client = getClient();
+
+      try {
+         client.admin().indices().prepareDelete("test").execute()
+               .actionGet();
+      } catch (Exception e) {
+         // ignore
+      }
+      client.admin().indices().prepareCreate("test").execute().actionGet();
+      client.admin().cluster().prepareHealth().setWaitForGreenStatus()
+            .execute().actionGet();
+
+      loadData();
+
+      client.admin().indices().prepareRefresh().execute().actionGet();
+
+   }
+
+
+   abstract protected void loadData() throws Exception;
+
+   protected void configureNodeSettings(ImmutableSettings.Builder settingsBuilder) {
+      settingsBuilder.put("index.number_of_shards", numberOfShards())
+              .put("index.number_of_replicas", 0);
+   }
+
+
+   protected int numberOfNodes() {
+      return numberOfShards();
+   }
+   protected int numberOfShards() {
+      return 1;
+   }
+
+   @AfterClass
+   public void closeNodes() {
+      client.close();
+      closeAllNodes();
+   }
+
+   protected Client getClient() {
+      return client("node0");
+   }
 }

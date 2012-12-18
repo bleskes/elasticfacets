@@ -13,8 +13,9 @@ import static org.hamcrest.Matchers.equalToIgnoringCase;
  *
  */
 public class FixedDistribHashedStringFacetTest extends AbstractFacetTest {
-	
-	protected void loadData() {
+   protected long documentCount =0;
+
+   protected void loadData() {
 		int max_term_count = maxTermCount();
 		
 		client.prepareIndex("test", "type1")

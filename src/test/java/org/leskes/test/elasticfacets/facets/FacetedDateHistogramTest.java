@@ -14,8 +14,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 public class FacetedDateHistogramTest extends AbstractFacetTest {
+   protected long documentCount =0;
 
-	@Override
+
+   @Override
 	protected void loadData() throws Exception {
 
 		client.prepareIndex("test", "type1")

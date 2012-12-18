@@ -1,11 +1,7 @@
 package org.leskes.test.elasticfacets.cache;
 
 import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.common.logging.ESLogger;
-import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.leskes.elasticfacets.cache.CacheStatsPerFieldAction;
@@ -13,11 +9,10 @@ import org.leskes.elasticfacets.cache.CacheStatsPerFieldRequest;
 import org.leskes.elasticfacets.cache.CacheStatsPerFieldResponse;
 import org.leskes.elasticfacets.cache.CacheStatsPerFieldStats;
 import org.leskes.test.elasticfacets.utils.AbstractNodesTests;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.concurrent.ExecutionException;
 
@@ -27,59 +22,31 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
 
 public class CacheStatsPerFieldTest extends AbstractNodesTests {
-    protected Client client;
     protected long documentCount = 0;
 
-    final protected ESLogger logger = Loggers
-            .getLogger(getClass());
-
-    @BeforeClass
-    public void createNodes() throws Exception {
-        ImmutableSettings.Builder settingsBuilder = ImmutableSettings.settingsBuilder();
-        configureNodeSettings(settingsBuilder);
-
-        Settings settings = settingsBuilder.build();
-        for (int i = 0; i < numberOfNodes(); i++) {
-            startNode("node" + i, settings);
-        }
-        client = getClient();
-
-        try {
-            client.admin().indices().prepareDelete("test").execute()
-                    .actionGet();
-        } catch (Exception e) {
-            // ignore
-        }
-        client.admin().indices().prepareCreate("test").execute().actionGet();
-        client.admin().cluster().prepareHealth().setWaitForGreenStatus()
-                .execute().actionGet();
+   protected void loadData() throws IOException {
+      for (int i=0;i<100;i++) {
+          client.prepareIndex("test", "type1")
+                  .setSource(
+                          jsonBuilder().startObject().field("tag", "tag" + i)
+                                  .endObject()).execute().actionGet();
+          documentCount++;
+      }
+   }
 
 
-        for (int i=0;i<100;i++) {
-            client.prepareIndex("test", "type1")
-                    .setSource(
-                            jsonBuilder().startObject().field("tag", "tag" + i)
-                                    .endObject()).execute().actionGet();
-            documentCount++;
-        }
-        client.admin().indices().prepareFlush().setRefresh(true).execute()
-                .actionGet();
-
-    }
-
-
-    protected void configureNodeSettings(ImmutableSettings.Builder settingsBuilder) {
+   protected void configureNodeSettings(ImmutableSettings.Builder settingsBuilder) {
         settingsBuilder.put("index.number_of_shards", numberOfShards())
                 .put("index.number_of_replicas", 0);
     }
 
 
     protected int numberOfShards() {
-        return 1;
+        return super.numberOfShards();
     }
 
     protected int numberOfNodes() {
-        return 1;
+        return super.numberOfShards();
     }
 
     protected int numberOfRuns() {
@@ -98,7 +65,7 @@ public class CacheStatsPerFieldTest extends AbstractNodesTests {
                 .get();
 
         for (CacheStatsPerFieldStats s : r) {
-            assertThat(s.fieldSizes().size(), equalTo(0));
+            assertThat(s.fieldEntries().size(), equalTo(0));
         }
     }
 
@@ -114,9 +81,9 @@ public class CacheStatsPerFieldTest extends AbstractNodesTests {
                     .get();
 
             for (CacheStatsPerFieldStats s : r) {
-                assertThat(s.fieldSizes().size(), equalTo(1));
-                assertThat(s.fieldSizes().get(0).fieldName, equalTo("tag"));
-                assertThat(s.fieldSizes().get(0).size, greaterThan(0L));
+                assertThat(s.fieldEntries().size(), equalTo(1));
+                assertThat(s.fieldEntries().get(0).fieldName, equalTo("tag"));
+                assertThat(s.fieldEntries().get(0).size, greaterThan(0L));
             }
         }
     }
@@ -158,13 +125,5 @@ public class CacheStatsPerFieldTest extends AbstractNodesTests {
     }
 
 
-    @AfterClass
-    public void closeNodes() {
-        client.close();
-        closeAllNodes();
-    }
 
-    protected Client getClient() {
-        return client("node0");
-    }
 }
