@@ -42,6 +42,8 @@ src/test/resources/es_env/logs/
 .settings
 .metadata
 .project
+*.iml
+.idea
 .classpath
 .Spotlight-V100
 .Trashes
