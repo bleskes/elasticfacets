@@ -20,27 +20,23 @@
 package org.leskes.elasticfacets.cache;
 
 import org.elasticsearch.action.ActionListener;
-import org.elasticsearch.action.admin.cluster.support.BaseClusterRequestBuilder;
+import org.elasticsearch.action.support.nodes.NodesOperationRequestBuilder;
 import org.elasticsearch.client.ClusterAdminClient;
+import org.elasticsearch.client.internal.InternalGenericClient;
 
 /**
  *
  */
 public class CacheStatsPerFieldRequestBuilder extends
-        BaseClusterRequestBuilder<CacheStatsPerFieldRequest, CacheStatsPerFieldResponse> {
-
-    public CacheStatsPerFieldRequestBuilder(ClusterAdminClient clusterClient) {
-        super(clusterClient, new CacheStatsPerFieldRequest());
-    }
-
-    public CacheStatsPerFieldRequestBuilder setNodesIds(String... nodesIds) {
-        request.nodesIds(nodesIds);
-        return this;
-    }
+        NodesOperationRequestBuilder<CacheStatsPerFieldRequest, CacheStatsPerFieldResponse, CacheStatsPerFieldRequestBuilder> {
 
 
-    @Override
+   protected CacheStatsPerFieldRequestBuilder(ClusterAdminClient client) {
+      super((InternalGenericClient)client, new CacheStatsPerFieldRequest());
+   }
+
+   @Override
     protected void doExecute(ActionListener<CacheStatsPerFieldResponse> listener) {
-        client.execute(CacheStatsPerFieldAction.INSTANCE, request, listener);
+       ((ClusterAdminClient) client).execute(CacheStatsPerFieldAction.INSTANCE, request, listener);
     }
 }

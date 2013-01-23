@@ -4,7 +4,7 @@
 	<groupId>org.leskes.elasticfacets</groupId>
 	<artifactId>ElasticFacetsPlugin</artifactId>
 	<packaging>jar</packaging>
-	<version>0.2.1-SNAPSHOT</version>
+	<version>0.2.2-SNAPSHOT</version>
 	<name>elasticfacets</name>
 	<url>http://maven.apache.org</url>
 	<repositories>
@@ -16,11 +16,11 @@
 	</repositories>
 	<profiles>
 		<profile>
-			<id>0.19.9</id>
+			<id>0.20.0</id>
 			<activation>
 				<property>
 					<name>env.ES</name>
-					<value>0.19.9</value>
+					<value>0.20.0</value>
 				</property>
 			</activation>
 			<dependencies>
@@ -28,17 +28,17 @@
 					<!-- hard requirement for testing -->
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
-					<version>[0.19.9]</version>
+					<version>[0.20.0]</version>
 					<scope>provided</scope>
 				</dependency>
 			</dependencies>
 		</profile>
 		<profile>
-			<id>0.19.10</id>
+			<id>0.20.1</id>
 			<activation>
 				<property>
 					<name>env.ES</name>
-					<value>0.19.10</value>
+					<value>0.20.1</value>
 				</property>
 			</activation>
 			<dependencies>
@@ -46,7 +46,7 @@
 					<!-- hard requirement for testing -->
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
-					<version>[0.19.10]</version>
+					<version>[0.20.1]</version>
 					<scope>provided</scope>
 				</dependency>
 			</dependencies>
@@ -70,11 +70,11 @@
             </dependencies>
         </profile>
         <profile>
-			<id>0.20.0</id>
+			<id>0.20.2</id>
 			<activation>
 				<property>
 					<name>env.ES</name>
-					<value>0.20.0</value>
+					<value>0.20.2</value>
 				</property>
 			</activation>
 			<dependencies>
@@ -82,7 +82,7 @@
 					<!-- hard requirement for testing -->
 					<groupId>org.elasticsearch</groupId>
 					<artifactId>elasticsearch</artifactId>
-					<version>[0.20.0.RC1]</version>
+					<version>[0.20.2]</version>
 					<scope>provided</scope>
 				</dependency>
 			</dependencies>
@@ -176,7 +176,7 @@
 
 	</build>
 	<properties>
-		<elasticsearch.version>0.19.9</elasticsearch.version>
+		<elasticsearch.version>0.20.2</elasticsearch.version>
 	</properties>
 
 	<dependencies>

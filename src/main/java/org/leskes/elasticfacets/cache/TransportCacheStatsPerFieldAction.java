@@ -150,7 +150,7 @@ public class TransportCacheStatsPerFieldAction extends TransportNodesOperationAc
         }
 
         CacheStatsPerFieldStatsRequest(String nodeId, CacheStatsPerFieldRequest request) {
-            super(nodeId);
+            super(request, nodeId);
             this.request = request;
         }
 
