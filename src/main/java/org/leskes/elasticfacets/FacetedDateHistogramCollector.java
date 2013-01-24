@@ -1,7 +1,5 @@
 package org.leskes.elasticfacets;
 
-import java.io.IOException;
-
 import org.apache.lucene.index.IndexReader;
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.joda.TimeZoneRounding;
@@ -16,12 +14,10 @@ import org.elasticsearch.index.field.data.FieldDataType;
 import org.elasticsearch.index.field.data.longs.LongFieldData;
 import org.elasticsearch.index.field.data.strings.StringFieldData;
 import org.elasticsearch.index.mapper.MapperService;
-import org.elasticsearch.search.facet.AbstractFacetCollector;
-import org.elasticsearch.search.facet.Facet;
-import org.elasticsearch.search.facet.FacetCollector;
-import org.elasticsearch.search.facet.FacetPhaseExecutionException;
-import org.elasticsearch.search.facet.FacetProcessor;
+import org.elasticsearch.search.facet.*;
 import org.elasticsearch.search.internal.SearchContext;
+
+import java.io.IOException;
 
 
 
@@ -77,7 +73,7 @@ public class FacetedDateHistogramCollector extends
 		
 		InternalCollectorFactory  colFactory= new InternalCollectorFactory(facetName, internalProcessor, internalFacetConfig, context);
 		
-		logger.debug("Facet {0}: Test running internal facet processor ", facetName);
+		logger.debug("Facet {}: Test running internal facet processor ", facetName);
 		this.internalExampleCollector = colFactory.createInternalCollector();
 
 		this.histoProc = new DateHistogramProc(facetName,tzRounding,colFactory);
