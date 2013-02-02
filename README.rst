@@ -4,10 +4,6 @@ Elastic Facets
 
 A collection of facets_ and facet-related tools_ for ElasticSearch.
 
-.. image:: https://travis-ci.org/bleskes/elasticfacets.png
-   :alt: build status
-   :align: right
-
 
 Installation
 ============
