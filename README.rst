@@ -11,6 +11,9 @@ A collection of facets_ and facet-related tools_ for ElasticSearch.
 
 Installation
 ============
+
+WARNING/UPDATE: this installation methods fails since github disabled their download feature (http://www.elasticsearch.org/blog/2012/12/17/new-download-service.html ) . I'm working on an alternative.
+
 In order to install the plugin, simply run: ``bin/plugin -install bleskes/elasticfacets/0.2``. Change the version number if needed (see Versions_).
 
 Versions
