@@ -33,42 +33,6 @@
 				</dependency>
 			</dependencies>
 		</profile>
-		<profile>
-			<id>0.20.1</id>
-			<activation>
-				<property>
-					<name>env.ES</name>
-					<value>0.20.1</value>
-				</property>
-			</activation>
-			<dependencies>
-				<dependency>
-					<!-- hard requirement for testing -->
-					<groupId>org.elasticsearch</groupId>
-					<artifactId>elasticsearch</artifactId>
-					<version>[0.20.1]</version>
-					<scope>provided</scope>
-				</dependency>
-			</dependencies>
-		</profile>
-        <profile>
-            <id>0.19.11</id>
-            <activation>
-                <property>
-                    <name>env.ES</name>
-                    <value>0.19.11</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <!-- hard requirement for testing -->
-                    <groupId>org.elasticsearch</groupId>
-                    <artifactId>elasticsearch</artifactId>
-                    <version>[0.19.11]</version>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-        </profile>
         <profile>
 			<id>0.20.2</id>
 			<activation>
@@ -87,8 +51,26 @@
 				</dependency>
 			</dependencies>
 		</profile>
-		
-	</profiles>
+        <profile>
+            <id>0.20.4</id>
+            <activation>
+                <property>
+                    <name>env.ES</name>
+                    <value>0.20.4</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <!-- hard requirement for testing -->
+                    <groupId>org.elasticsearch</groupId>
+                    <artifactId>elasticsearch</artifactId>
+                    <version>[0.20.4]</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+    </profiles>
 	<build>
 		<plugins>
 	      <plugin>
