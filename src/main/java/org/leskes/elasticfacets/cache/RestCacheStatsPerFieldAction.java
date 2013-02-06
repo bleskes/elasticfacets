@@ -50,7 +50,6 @@ public class RestCacheStatsPerFieldAction extends BaseRestHandler {
     public void handleRequest(final RestRequest request, final RestChannel channel) {
         String[] nodesIds = RestActions.splitNodes(request.param("nodeId"));
         CacheStatsPerFieldRequest nodesRequest = new CacheStatsPerFieldRequest(nodesIds);
-        nodesRequest.listenerThreaded(false);
         client.admin().cluster().execute(CacheStatsPerFieldAction.INSTANCE,
                 nodesRequest, new ActionListener<CacheStatsPerFieldResponse>() {
             @Override
