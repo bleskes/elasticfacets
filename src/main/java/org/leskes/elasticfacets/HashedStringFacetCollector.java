@@ -361,7 +361,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         final int[] counts;
         final int[] docIdsForValues; // of every value keep a docid where we run into it.
 
-        int position = -1;
+        int position = 0; // first value is a null value.
         int currentValue;
         int currentDocId;
         int currentCount;
@@ -382,7 +382,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 		}
 
 		public void onOrdinal(int docId, int ordinal) {
-			if (ordinal<0) {
+			if (ordinal == 0) {
 				missing++;
 				return; // no value no count..
 			}

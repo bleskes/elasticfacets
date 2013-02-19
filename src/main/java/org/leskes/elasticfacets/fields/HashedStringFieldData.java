@@ -1,9 +1,5 @@
 package org.leskes.elasticfacets.fields;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Comparator;
-
 import org.apache.lucene.index.IndexReader;
 import org.elasticsearch.common.RamUsage;
 import org.elasticsearch.common.logging.ESLogger;
@@ -12,6 +8,10 @@ import org.elasticsearch.common.trove.list.array.TIntArrayList;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
 import org.elasticsearch.index.field.data.support.FieldDataLoader;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  *
@@ -126,7 +126,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
         protected void sort_values() {
         	// as we hashed the values they are not sorted. They need to be for proper working of the rest. 
         	Integer[] translation_indices = new Integer[hashed_terms.size()-1]; // drop the first "non value place"
-        	for (int i=0;i<translation_indices.length;i++) translation_indices[i]=i+1; // one ofsset for the dropped place
+        	for (int i=0;i<translation_indices.length;i++) translation_indices[i]=i+1; // one offset for the dropped place
         	Arrays.sort(translation_indices, new Comparator<Integer>() {
 
 				public int compare(Integer paramT1, Integer paramT2) {
@@ -138,18 +138,14 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
         	
         	
         	// now build a sorted array and update the ordinal values (added the n value in the beginning)
-        	sorted_hashed_terms =  new int[hashed_terms.size()-1];
-        	new_location_of_hashed_terms_in_sorted = new int[hashed_terms.size()];
-        	
-        	for (int i=0;i<translation_indices.length;i++) { 
-        		sorted_hashed_terms[i]=hashed_terms.get(translation_indices[i]);
-        		new_location_of_hashed_terms_in_sorted[translation_indices[i]]=i;
+         sorted_hashed_terms =  new int[hashed_terms.size()];
+
+         new_location_of_hashed_terms_in_sorted = new int[hashed_terms.size()];
+        	for (int i=1;i<=translation_indices.length;i++) {
+        		sorted_hashed_terms[i]=hashed_terms.get(translation_indices[i-1]);
+        		new_location_of_hashed_terms_in_sorted[translation_indices[i-1]]=i;
         	}
         	
-        	// before the sorting the first value (0) was indicating docs with no values. After sorting 0 has moved
-        	// We could use the value as indication but that's an assumption of it being an illegal hash value.
-        	// Rather then that - we assign an ordinal of -1.
-        	new_location_of_hashed_terms_in_sorted[0]=-1;
 
 	
         }

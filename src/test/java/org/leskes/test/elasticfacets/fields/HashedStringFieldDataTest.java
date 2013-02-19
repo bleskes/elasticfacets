@@ -137,7 +137,7 @@ public class HashedStringFieldDataTest {
 
 		int[] sortedValues = Arrays.copyOf(sFieldData.values(),
 				sFieldData.values().length);
-		Arrays.sort(sortedValues);
+		Arrays.sort(sortedValues,1,sortedValues.length);
 		assertThat("Internal values of field data are not sorted!",
 				sFieldData.values(), equalTo(sortedValues));
 
@@ -255,7 +255,7 @@ public class HashedStringFieldDataTest {
 				
 					public void onOrdinal(int int_docId, int ordinal) {
 						assertThat(int_docId,equalTo(docId));
-						if (ordinal < 0)
+						if (ordinal == 0)
 							missing.add(int_docId);
 						else
 							values.add(ordinal);

@@ -4,7 +4,7 @@ import org.elasticsearch.common.RamUsage;
 
 public class SingleValueHashedStringFieldData extends HashedStringFieldData {
 	
-	// order with value -1 indicates no value
+	// order with value 0 indicates no value
     protected final int[] ordinals;
 
 	
@@ -29,7 +29,7 @@ public class SingleValueHashedStringFieldData extends HashedStringFieldData {
 
 	@Override
 	public boolean hasValue(int docId) {
-		return ordinals[docId] >=0;
+		return ordinals[docId] > 0;
 	}
 
     public int hashValue(int docId) {
@@ -38,7 +38,7 @@ public class SingleValueHashedStringFieldData extends HashedStringFieldData {
 
     public void forEachValueInDoc(int docId, HashedStringValueInDocProc proc) {
         int loc = ordinals[docId];
-        if (loc < 0) {
+        if (loc == 0) {
             proc.onMissing(docId);
             return;
         }
