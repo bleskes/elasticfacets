@@ -6,9 +6,9 @@ public class MultiValueHashedStringFieldData extends HashedStringFieldData {
 
 	
     public MultiValueHashedStringFieldData(String field, int[] sorted_values,
-			int[][] ordinals) {
+			MultiValueOrdinalArray ordinals) {
 		super(field,sorted_values);
-		this.ordinals = new MultiValueOrdinalArray(ordinals);
+		this.ordinals = ordinals;
 	}
     
     @Override

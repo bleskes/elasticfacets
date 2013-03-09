@@ -19,8 +19,8 @@ public class MultiValueOrdinalArrayTests {
 
    class smallMultiValueOrdinalArray extends MultiValueOrdinalArray {
 
-      public smallMultiValueOrdinalArray(int[][] ordinalToStore) {
-         super(ordinalToStore,STORAGE_SIZE);
+      public smallMultiValueOrdinalArray(int[] ordinalsNoPerDoc) {
+         super(ordinalsNoPerDoc,STORAGE_SIZE);
       }
    }
 
@@ -47,18 +47,21 @@ public class MultiValueOrdinalArrayTests {
    }
 
    private smallMultiValueOrdinalArray getSmallMultiValueOrdinalArray(ArrayList<int[]> ordinalsPerDoc) {
-      int maxLength = 0;
-      for (int[] ol: ordinalsPerDoc) {
-         if (maxLength < ol.length) maxLength =  ol.length;
+      int[] ordinalsNoPerDoc = new int[ordinalsPerDoc.size()];
+      for (int doc=0; doc < ordinalsNoPerDoc.length; doc++) {
+         ordinalsNoPerDoc[doc] = ordinalsPerDoc.get(doc).length;
       }
 
-      int [][] ordinalArray= new int[maxLength][ordinalsPerDoc.size()];
+      smallMultiValueOrdinalArray ret = new smallMultiValueOrdinalArray(ordinalsNoPerDoc);
+
+      MultiValueOrdinalArray.OrdinalLoader loader = ret.createLoader();
+
       for (int doc=0;doc<ordinalsPerDoc.size();doc++) {
-         for (int o=0;o<ordinalsPerDoc.get(doc).length;o++)
-            ordinalArray[o][doc]=ordinalsPerDoc.get(doc)[o];
+         for (int o : ordinalsPerDoc.get(doc))
+            loader.addDocOrdinal(doc,o);
       }
 
-      return new smallMultiValueOrdinalArray(ordinalArray);
+      return ret;
    }
 
    @Test

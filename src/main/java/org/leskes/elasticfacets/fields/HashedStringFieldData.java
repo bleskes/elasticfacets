@@ -7,7 +7,6 @@ import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.trove.list.array.TIntArrayList;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
-import org.elasticsearch.index.field.data.support.FieldDataLoader;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,7 +39,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
         }
         
         if (collisions > 0) 
-        	logger.warn("HashedStringFieldData intialized, but with {} collisions. Total value count: {}",collisions,values.length);
+        	logger.warn("HashedStringFieldData initialized, but with {} collisions. Total value count: {}",collisions,values.length);
     }
     
     public int[] values() {
@@ -49,6 +48,8 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
     public int collisions() {
 		return collisions;
 	}
+
+
 
 
     @Override
@@ -102,10 +103,10 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
    
     public static HashedStringFieldData load(IndexReader reader, String field) throws IOException {
-        return FieldDataLoader.load(reader, field, new HashedStringTypeLoader());
+        return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader());
     }
 
-    static class HashedStringTypeLoader extends FieldDataLoader.FreqsTypeLoader<HashedStringFieldData> {
+    static class HashedStringTypeLoader extends CompactFieldDataLoader.FreqsTypeLoader<HashedStringFieldData> {
 
     	 private final TIntArrayList hashed_terms = new TIntArrayList();
     	 
@@ -166,15 +167,29 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
         }
 
 
-        public HashedStringFieldData buildMultiValue(String field, int[][] ordinals) {
+        public HashedStringFieldData buildMultiValue(String field, MultiValueOrdinalArray ordinalsArray) {
         	sort_values();
-        	
-        	for (int[] ordinal: ordinals) {
-        		updateOrdinalArray(ordinal);	
-        	}
-        	
-        	
-            return new MultiValueHashedStringFieldData(field,sorted_hashed_terms,ordinals);
+
+          // we need to do translation, count again...
+
+           int [] docOrdinalCount = new int[ordinalsArray.maxDoc()];
+           for (int docId =0;docId < docOrdinalCount.length;docId++) {
+              MultiValueOrdinalArray.OrdinalIterator ordIterator = ordinalsArray.getOrdinalIteratorForDoc(docId);
+              while (ordIterator.getNextOrdinal() != 0) docOrdinalCount[docId]++;
+           }
+
+           MultiValueOrdinalArray translatedOrdinals = new MultiValueOrdinalArray(docOrdinalCount);
+           MultiValueOrdinalArray.OrdinalLoader ordLoader = translatedOrdinals.createLoader();
+           for (int docId =0;docId < docOrdinalCount.length;docId++) {
+              MultiValueOrdinalArray.OrdinalIterator ordIterator = ordinalsArray.getOrdinalIteratorForDoc(docId);
+              int o = ordIterator.getNextOrdinal();
+              while (o != 0) {
+                 ordLoader.addDocOrdinal(docId, new_location_of_hashed_terms_in_sorted[o]);
+                 o = ordIterator.getNextOrdinal();
+              }
+           }
+
+            return new MultiValueHashedStringFieldData(field,sorted_hashed_terms,translatedOrdinals);
         }
     }
 

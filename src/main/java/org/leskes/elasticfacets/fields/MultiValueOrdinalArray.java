@@ -43,226 +43,268 @@ public class MultiValueOrdinalArray {
 
     */
 
-    protected ESLogger logger = Loggers.getLogger(getClass());
+   protected ESLogger logger = Loggers.getLogger(getClass());
 
-    protected final int MAX_STORAGE_SIZE_SHIFT;
-    protected final int MAX_STORAGE_SIZE;
+   protected final int MAX_STORAGE_SIZE_SHIFT;
+   protected final int MAX_STORAGE_SIZE;
 
-    protected final int[] firstLevel;
-    protected final int[][] storageArrays;
+   protected final int[] firstLevel;
+   protected final int[][] storageArrays;
 
-    public MultiValueOrdinalArray(int[][] ordinalToStore) {
-        this(ordinalToStore, (1 << 26) / RamUsage.NUM_BYTES_INT); // storage array of 64MB
-    }
+   public MultiValueOrdinalArray(int[] ordinalsNoPerDoc) {
+      this(ordinalsNoPerDoc, (1 << 26) / RamUsage.NUM_BYTES_INT); // storage array of 64MB
+   }
 
-    protected MultiValueOrdinalArray(int[][] ordinalToStore, int max_storage_size) {
-        int shift = 0;
+   protected MultiValueOrdinalArray(int[] ordinalsNoPerDoc, int max_storage_size) {
+      int shift = 0;
 
-        // not need to over allocated.
-        int needed_length = ordinalToStore.length * ordinalToStore[0].length;
-        if (needed_length < 0)
-            logger.warn("Needed length overflow: {}, ordinalToStore.length: {}, ordinalToStore[0].length: {}",
-                    needed_length, ordinalToStore.length, ordinalToStore[0].length);
+      // not need to over allocated
 
-        if (0 < needed_length && needed_length < max_storage_size)
-            max_storage_size = needed_length + 1;
+      int needed_length = 0;
+      for (int anOrdinalsNoPerDoc : ordinalsNoPerDoc) needed_length += anOrdinalsNoPerDoc;
 
-        MAX_STORAGE_SIZE = max_storage_size;
-        max_storage_size--; // array is 0-based, remove one for maximum possible index
-        while (max_storage_size > 0) {
-            shift++;
-            max_storage_size = max_storage_size >> 1;
-        }
+      if (needed_length < 0)
+         logger.warn("Needed length overflow: {}",needed_length);
 
-        MAX_STORAGE_SIZE_SHIFT = shift;
+      if (0 < needed_length && needed_length < max_storage_size)
+         max_storage_size = needed_length + 1;
 
-        ArrayList<int[]> storageArrays = new ArrayList<int[]>();
+      MAX_STORAGE_SIZE = max_storage_size;
+      max_storage_size--; // array is 0-based, remove one for maximum possible index
+      while (max_storage_size > 0) {
+         shift++;
+         max_storage_size = max_storage_size >> 1;
+      }
 
-        // temporary storage for doc ordinals
-        TIntArrayList docOrdinals = new TIntArrayList(ordinalToStore.length);
+      MAX_STORAGE_SIZE_SHIFT = shift;
 
-        TIntArrayList curStorageArray = new TIntArrayList(MAX_STORAGE_SIZE);
-        int curStorageArrayIndex = 0;
+      ArrayList<int[]> storageArrays = new ArrayList<int[]>();
 
-        // Two things about this:
-        // 1) First array must start with 1 as 0 pointer means no value.
-        // 2) Always points to the next usable place
-        int curOffsetWithInStorage = 1;
-        curStorageArray.add(Integer.MIN_VALUE); // first place is wasted.
-        int maxDoc = ordinalToStore[0].length;
+      TIntArrayList curStorageArray = new TIntArrayList(MAX_STORAGE_SIZE);
+      int curStorageArrayIndex = 0;
 
-        firstLevel = new int[maxDoc];
+      // Two things about this:
+      // 1) First array must start with 1 as 0 pointer means no value.
+      // 2) Always points to the next usable place
+      int curOffsetWithInStorage = 1;
+      curStorageArray.add(Integer.MIN_VALUE); // first place is wasted.
+      int maxDoc = ordinalsNoPerDoc.length;
 
-        for (int curDoc = 0; curDoc < maxDoc; curDoc++) {
-            docOrdinals.clear(ordinalToStore.length);
-            for (int[] anOrdinalToStore : ordinalToStore) {
-                int o = anOrdinalToStore[curDoc];
-                if (o == 0) {
-                    break;
-                }
-                docOrdinals.add(o);
-            }
+      firstLevel = new int[maxDoc];
 
-            switch (docOrdinals.size()) {
-                case 0:
-                    break; // nothing to do
-                case 1:
-                    firstLevel[curDoc] = docOrdinals.get(0);
-                    break;
-                default:
+      for (int curDoc = 0; curDoc < maxDoc; curDoc++) {
+
+         int curOrdinalNoForDoc = ordinalsNoPerDoc[curDoc];
+
+         switch (curOrdinalNoForDoc) {
+            case 0:
+            case 1:
+               break; // nothing to do ordinals will fit in the firstLevel array
+            default:
 
 
-                    if ((curOffsetWithInStorage + docOrdinals.size()) > MAX_STORAGE_SIZE) {
-                        if (docOrdinals.size() > MAX_STORAGE_SIZE - 1) {
-                            throw new ElasticSearchException(
-                                    String.format("Number of values for doc %s has a exceeded the maximum allowed " +
-                                            "(got %s values, max %s)",
-                                            curDoc, docOrdinals.size(), MAX_STORAGE_SIZE - 1));
-                        }
+               if ((curOffsetWithInStorage + curOrdinalNoForDoc) > MAX_STORAGE_SIZE) {
+                  if (curOrdinalNoForDoc > MAX_STORAGE_SIZE - 1) {
+                     throw new ElasticSearchException(
+                             String.format("Number of values for doc %s has a exceeded the maximum allowed " +
+                                     "(got %s values, max %s)",
+                                     curDoc, curOrdinalNoForDoc, MAX_STORAGE_SIZE - 1));
+                  }
 
-                        curStorageArrayIndex++;
-                        logger.debug("Allocating a new storage array. {} so far.", curStorageArrayIndex);
+                  curStorageArrayIndex++;
+                  logger.debug("Allocating a new storage array. {} so far.", curStorageArrayIndex);
 
-                        storageArrays.add(curStorageArray.toArray());
-                        curOffsetWithInStorage = 1; // for pointer consistency waste a slot.
-                        curStorageArray.clear(MAX_STORAGE_SIZE);
-                        curStorageArray.add(Integer.MIN_VALUE); // first place is wasted.
-                    }
+                  storageArrays.add(curStorageArray.toArray());
+                  curOffsetWithInStorage = 1; // for pointer consistency waste a slot.
+                  curStorageArray.clear(MAX_STORAGE_SIZE);
+                  curStorageArray.add(Integer.MIN_VALUE); // first place is wasted.
+               }
 
-                    firstLevel[curDoc] = -((curStorageArrayIndex << MAX_STORAGE_SIZE_SHIFT) + curOffsetWithInStorage);
 
-                    int j = 0;
-                    for (; j < docOrdinals.size() - 1; j++) {
-                        curStorageArray.add(docOrdinals.get(j));
-                        curOffsetWithInStorage++;
-                    }
-                    // mark last with a negative value
-                    curStorageArray.add(-docOrdinals.get(j));
-                    curOffsetWithInStorage++;
-            }
-        }
+               for (int i=0;i< curOrdinalNoForDoc; i++)  curStorageArray.add(0); // reserve space.
 
-        // all done. populate final storage space
-        this.storageArrays = new int[storageArrays.size() + 1][];
-        for (int i = 0; i < storageArrays.size(); i++) {
-            this.storageArrays[i] = storageArrays.get(i);
-        }
-        this.storageArrays[storageArrays.size()] = curStorageArray.toArray();
+               firstLevel[curDoc] = -((curStorageArrayIndex << MAX_STORAGE_SIZE_SHIFT) + curOffsetWithInStorage);
 
-        logger.debug("Ordinal array loaded. {} docs, {} secondary storage arrays. Memory signature: {}KB",
-                this.firstLevel.length, this.storageArrays.length, computeSizeInBytes() / 1024);
-    }
+               curOffsetWithInStorage += curOrdinalNoForDoc; // make space for the ordinals.
+         }
+      }
 
-    public long computeSizeInBytes() {
-        long size = RamUsage.NUM_BYTES_ARRAY_HEADER + firstLevel.length * RamUsage.NUM_BYTES_INT;
-        size += RamUsage.NUM_BYTES_ARRAY_HEADER; // for the top level storagearray
-        for (int[] sa : storageArrays) {
-            size += RamUsage.NUM_BYTES_ARRAY_HEADER + RamUsage.NUM_BYTES_INT * sa.length;
-        }
-        size += RamUsage.NUM_BYTES_INT * 2; // constants
-        size += RamUsage.NUM_BYTES_OBJECT_REF; // logger
+      // all done. populate final storage space
+      this.storageArrays = new int[storageArrays.size() + 1][];
+      for (int i = 0; i < storageArrays.size(); i++) {
+         this.storageArrays[i] = storageArrays.get(i);
+      }
+      this.storageArrays[storageArrays.size()] = curStorageArray.toArray();
 
-        return size;
-    }
+      logger.debug("Ordinal array loaded. {} docs, {} secondary storage arrays. Memory signature: {}KB",
+              this.firstLevel.length, this.storageArrays.length, computeSizeInBytes() / 1024);
+   }
 
-    public boolean hasValue(int docId) {
-        return firstLevel[docId] != 0;
-    }
+   public long computeSizeInBytes() {
+      long size = RamUsage.NUM_BYTES_ARRAY_HEADER + firstLevel.length * RamUsage.NUM_BYTES_INT;
+      size += RamUsage.NUM_BYTES_ARRAY_HEADER; // for the top level storagearray
+      for (int[] sa : storageArrays) {
+         size += RamUsage.NUM_BYTES_ARRAY_HEADER + RamUsage.NUM_BYTES_INT * sa.length;
+      }
+      size += RamUsage.NUM_BYTES_INT * 2; // constants
+      size += RamUsage.NUM_BYTES_OBJECT_REF; // logger
 
-    public void forEachOrdinalInDoc(int docId, FieldData.OrdinalInDocProc proc) {
+      return size;
+   }
 
-        OrdinalIterator iter = getOrdinalIteratorForDoc(docId);
+   public OrdinalLoader createLoader() {
+      return new OrdinalLoader(this);
+   }
 
-        int o = iter.getNextOrdinal();
-        if (o == 0) {
-            proc.onOrdinal(docId, o); // first one is special as we need to communicate 0 if nothing is found
+   public int maxDoc() {
+      return firstLevel.length;
+   }
+
+
+   public class OrdinalLoader {
+
+      // array of the next insertion point for documents
+      int [] currentIndexForDocs;
+
+      MultiValueOrdinalArray targetArray;
+
+      protected OrdinalLoader(MultiValueOrdinalArray targetArray) {
+         this.targetArray = targetArray;
+         currentIndexForDocs = new int[targetArray.firstLevel.length];
+      }
+
+      public void addDocOrdinal(int docId, int ordinal) {
+         int indexForDoc = currentIndexForDocs[docId];
+         boolean firstDoc = false;
+         if (indexForDoc == 0) { // uninitialized
+            indexForDoc = -targetArray.firstLevel[docId]; // flip if index into arrays.
+            currentIndexForDocs[docId] = indexForDoc;
+            firstDoc = true;
+         }
+
+         if (indexForDoc == 0) { // single ordinal doc
+            targetArray.firstLevel[docId] = ordinal;
+            currentIndexForDocs[docId] = -1 ; // marked as single array.
             return;
-        }
+         }
+         else if (indexForDoc > 0) {  // multi ordinal doc skip to right place in storage.
+            int storageArrayIndex = indexForDoc >> MAX_STORAGE_SIZE_SHIFT;
+            int[] storageArray = targetArray.storageArrays[storageArrayIndex];
+            indexForDoc -= storageArrayIndex;
+            if (storageArray[indexForDoc] !=0 )
+               throw new ElasticSearchException(
+                       String.format("Oridnal overflow for docId %s.", docId));
 
-        while (o != 0) {
-            proc.onOrdinal(docId, o);
-            o = iter.getNextOrdinal();
-        }
-    }
+            if (!firstDoc) storageArray[indexForDoc-1] *= -1; // remove end marker from prv. ordinal.
+            storageArray[indexForDoc] = -ordinal; // mark as end
+            currentIndexForDocs[docId]++;
+         }
+         else {
+            throw new ElasticSearchException(
+                    String.format("We expected one ordinal for docId %s but got more.", docId));
+         }
+      }
 
-    public interface OrdinalIterator {
-        /**
-         * Returns the next ordinal for current docId or 0 when no more ordinals are available.
-         */
-        public int getNextOrdinal();
-    }
+   }
 
-    public OrdinalIterator getOrdinalIteratorForDoc(int docId) {
-        int ordinalOrPointer = firstLevel[docId];
+   public boolean hasValue(int docId) {
+      return firstLevel[docId] != 0;
+   }
 
-        if (ordinalOrPointer >= 0) {
-            return singleIteratorCache.get().get().init(ordinalOrPointer);
-        }
+   public void forEachOrdinalInDoc(int docId, FieldData.OrdinalInDocProc proc) {
 
-        ordinalOrPointer = -ordinalOrPointer;
+      OrdinalIterator iter = getOrdinalIteratorForDoc(docId);
 
-        int storageArrayIndex = ordinalOrPointer >> MAX_STORAGE_SIZE_SHIFT;
-        int[] storageArray = storageArrays[storageArrayIndex];
-        ordinalOrPointer -= storageArrayIndex;
+      int o = iter.getNextOrdinal();
+      if (o == 0) {
+         proc.onOrdinal(docId, o); // first one is special as we need to communicate 0 if nothing is found
+         return;
+      }
 
-        return multiOrdinalIteratorCache.get().get().init(storageArray, ordinalOrPointer);
+      while (o != 0) {
+         proc.onOrdinal(docId, o);
+         o = iter.getNextOrdinal();
+      }
+   }
 
+   public interface OrdinalIterator {
+      /**
+       * Returns the next ordinal for current docId or 0 when no more ordinals are available.
+       */
+      public int getNextOrdinal();
+   }
 
-    }
+   public OrdinalIterator getOrdinalIteratorForDoc(int docId) {
+      int ordinalOrPointer = firstLevel[docId];
 
-    private ThreadLocal<ThreadLocals.CleanableValue<SingleOrdinalIterator>> singleIteratorCache =
-            new ThreadLocal<ThreadLocals.CleanableValue<SingleOrdinalIterator>>() {
-                @Override
-                protected ThreadLocals.CleanableValue<SingleOrdinalIterator> initialValue() {
-                    return new ThreadLocals.CleanableValue<SingleOrdinalIterator>(new SingleOrdinalIterator());
-                }
-            };
+      if (ordinalOrPointer >= 0) {
+         return singleIteratorCache.get().get().init(ordinalOrPointer);
+      }
 
-    private ThreadLocal<ThreadLocals.CleanableValue<MultiOrdinalIterator>> multiOrdinalIteratorCache =
-            new ThreadLocal<ThreadLocals.CleanableValue<MultiOrdinalIterator>>() {
-                @Override
-                protected ThreadLocals.CleanableValue<MultiOrdinalIterator> initialValue() {
-                    return new ThreadLocals.CleanableValue<MultiOrdinalIterator>(new MultiOrdinalIterator());
-                }
-            };
+      ordinalOrPointer = -ordinalOrPointer;
 
-    protected static class SingleOrdinalIterator implements OrdinalIterator {
+      int storageArrayIndex = ordinalOrPointer >> MAX_STORAGE_SIZE_SHIFT;
+      int[] storageArray = storageArrays[storageArrayIndex];
+      ordinalOrPointer -= storageArrayIndex;
 
-        private int ordinal;
-
-        public SingleOrdinalIterator init(int ordinal) {
-            this.ordinal = ordinal;
-            return this;
-        }
-
-        public int getNextOrdinal() {
-            int i = ordinal;
-            ordinal = 0; // reset for the next time.
-            return i;
-        }
-    }
-
-    protected static class MultiOrdinalIterator implements OrdinalIterator {
-
-        private int ordinalIndex;
-        private int[] storageArray;
-
-        public MultiOrdinalIterator init(int[] storageArray, int ordinalIndex) {
-            this.storageArray = storageArray;
-            this.ordinalIndex = ordinalIndex;
-            return this;
-        }
+      return multiOrdinalIteratorCache.get().get().init(storageArray, ordinalOrPointer);
 
 
-        public int getNextOrdinal() {
-            if (ordinalIndex < 0) return 0;
-            int ordinal = storageArray[ordinalIndex++];
-            if (ordinal < 0) {
-                // last one.
-                ordinal = -ordinal;
-                ordinalIndex = -1;
-            }
-            return ordinal;
-        }
-    }
+   }
+
+   private ThreadLocal<ThreadLocals.CleanableValue<SingleOrdinalIterator>> singleIteratorCache =
+           new ThreadLocal<ThreadLocals.CleanableValue<SingleOrdinalIterator>>() {
+              @Override
+              protected ThreadLocals.CleanableValue<SingleOrdinalIterator> initialValue() {
+                 return new ThreadLocals.CleanableValue<SingleOrdinalIterator>(new SingleOrdinalIterator());
+              }
+           };
+
+   private ThreadLocal<ThreadLocals.CleanableValue<MultiOrdinalIterator>> multiOrdinalIteratorCache =
+           new ThreadLocal<ThreadLocals.CleanableValue<MultiOrdinalIterator>>() {
+              @Override
+              protected ThreadLocals.CleanableValue<MultiOrdinalIterator> initialValue() {
+                 return new ThreadLocals.CleanableValue<MultiOrdinalIterator>(new MultiOrdinalIterator());
+              }
+           };
+
+   protected static class SingleOrdinalIterator implements OrdinalIterator {
+
+      private int ordinal;
+
+      public SingleOrdinalIterator init(int ordinal) {
+         this.ordinal = ordinal;
+         return this;
+      }
+
+      public int getNextOrdinal() {
+         int i = ordinal;
+         ordinal = 0; // reset for the next time.
+         return i;
+      }
+   }
+
+   protected static class MultiOrdinalIterator implements OrdinalIterator {
+
+      private int ordinalIndex;
+      private int[] storageArray;
+
+      public MultiOrdinalIterator init(int[] storageArray, int ordinalIndex) {
+         this.storageArray = storageArray;
+         this.ordinalIndex = ordinalIndex;
+         return this;
+      }
+
+
+      public int getNextOrdinal() {
+         if (ordinalIndex < 0) return 0;
+         int ordinal = storageArray[ordinalIndex++];
+         if (ordinal < 0) {
+            // last one.
+            ordinal = -ordinal;
+            ordinalIndex = -1;
+         }
+         return ordinal;
+      }
+   }
 }
