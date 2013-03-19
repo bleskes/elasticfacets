@@ -103,7 +103,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
    
     public static HashedStringFieldData load(IndexReader reader, String field) throws IOException {
-        return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader());
+        return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader(), 100);
     }
 
     static class HashedStringTypeLoader extends CompactFieldDataLoader.FreqsTypeLoader<HashedStringFieldData> {

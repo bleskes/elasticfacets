@@ -92,6 +92,7 @@ public class MultiValueOrdinalArrayTests {
       o.add(new int[] {1});
       o.add(new int[] {1,2,3,4,5,6});
       o.add(new int[] {3});
+      o.add(new int[] {1,2,3,4});
       regressToArray(o);
    }
 

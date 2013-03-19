@@ -148,7 +148,8 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
                 aggregators.add(current);
             }
         }
-        fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader, indexFieldName);
+        fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader,
+                indexFieldName);
         current = new ReaderAggregator(fieldData, docBase);
     }
 

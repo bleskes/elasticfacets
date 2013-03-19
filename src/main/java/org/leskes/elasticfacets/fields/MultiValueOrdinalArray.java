@@ -190,10 +190,16 @@ public class MultiValueOrdinalArray {
          else if (indexForDoc > 0) {  // multi ordinal doc skip to right place in storage.
             int storageArrayIndex = indexForDoc >> MAX_STORAGE_SIZE_SHIFT;
             int[] storageArray = targetArray.storageArrays[storageArrayIndex];
-            indexForDoc -= storageArrayIndex;
+            indexForDoc -= storageArrayIndex << MAX_STORAGE_SIZE_SHIFT;
+            if (indexForDoc >= storageArray.length)
+               throw new ElasticSearchException(
+                       String.format("Ordinal overflow for docId %s. storageArrayIndex: %s, storageArray.length: %s," +
+                               " indexForDoc:%s, currentIndexForDocs[docId]: %s, firstDoc: %s",
+                               docId, storageArrayIndex, storageArray.length, indexForDoc, currentIndexForDocs[docId],
+                               firstDoc));
             if (storageArray[indexForDoc] !=0 )
                throw new ElasticSearchException(
-                       String.format("Oridnal overflow for docId %s.", docId));
+                       String.format("Ordinal overflow for docId %s.", docId));
 
             if (!firstDoc) storageArray[indexForDoc-1] *= -1; // remove end marker from prv. ordinal.
             storageArray[indexForDoc] = -ordinal; // mark as end
@@ -245,7 +251,7 @@ public class MultiValueOrdinalArray {
 
       int storageArrayIndex = ordinalOrPointer >> MAX_STORAGE_SIZE_SHIFT;
       int[] storageArray = storageArrays[storageArrayIndex];
-      ordinalOrPointer -= storageArrayIndex;
+      ordinalOrPointer -= storageArrayIndex << MAX_STORAGE_SIZE_SHIFT;
 
       return multiOrdinalIteratorCache.get().get().init(storageArray, ordinalOrPointer);
 

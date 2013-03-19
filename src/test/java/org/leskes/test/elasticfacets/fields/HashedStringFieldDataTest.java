@@ -211,25 +211,54 @@ public class HashedStringFieldDataTest {
 				Lucene.VERSION, new PatternAnalyzer(Version.LUCENE_36, PatternAnalyzer.NON_WORD_PATTERN, false, null)));
 
 		indexWriter.addDocument(DocumentBuilder.doc()
-				.add(DocumentBuilder.field("svalue", "FB"))
-				.add(DocumentBuilder.field("svalue", "Ea")).build());
+				.add(DocumentBuilder.field("mvalue", "FB"))
+				.add(DocumentBuilder.field("mvalue", "Ea")).build());
 
 		indexWriter.addDocument(DocumentBuilder.doc()
-				.add(DocumentBuilder.field("svalue", "BB"))
-				.add(DocumentBuilder.field("svalue", "Aa")).build());
+				.add(DocumentBuilder.field("mvalue", "BB"))
+				.add(DocumentBuilder.field("mvalue", "Aa")).build());
 
 		
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
 		MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
-				.load(reader, "svalue");
+				.load(reader, "mvalue");
 		
 		assertThat(sFieldData.collisions(),equalTo(2));
 		indexWriter.close();
 
 	}
 
-	protected int getDocHashes(int docId, HashedStringFieldData sFieldData,
+   @Test
+   public void TestMultiValueMaxTerm() throws Exception {
+      Directory dir = new RAMDirectory();
+      IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(
+              Lucene.VERSION, new PatternAnalyzer(Version.LUCENE_36, PatternAnalyzer.WHITESPACE_PATTERN, false, null)));
+
+      DocumentBuilder d = DocumentBuilder.doc();
+
+      for (int i=0;i<200;i++) d.add(DocumentBuilder.field("mvalue", "t" + i));
+
+      indexWriter.addDocument(d.build());
+
+      indexWriter.addDocument(DocumentBuilder.doc()
+              .add(DocumentBuilder.field("mvalue", "t1"))
+              .add(DocumentBuilder.field("mvalue", "t2")).build());
+
+
+      IndexReader reader = IndexReader.open(indexWriter, true);
+
+      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
+              .load(reader, "mvalue");
+
+      assertThat(sFieldData.hasValue(0),equalTo(false));
+      assertThat(sFieldData.hasValue(1),equalTo(true));
+      indexWriter.close();
+
+   }
+
+
+   protected int getDocHashes(int docId, HashedStringFieldData sFieldData,
 			final ArrayList<Integer> values) {
 		values.clear();
 		final ArrayList<Integer> missing = new ArrayList<Integer>();

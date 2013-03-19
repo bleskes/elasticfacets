@@ -15,35 +15,48 @@ public class CompactFieldDataLoader {
 
    final static ESLogger logger = Loggers.getLogger(CompactFieldDataLoader.class);
 
-   static int count = 0;
-
    @SuppressWarnings({"StringEquality"})
-   public static <T extends FieldData> T load(final IndexReader reader, String field, final TypeLoader<T> loader) throws IOException {
+   public static <T extends FieldData> T load(final IndexReader reader, String field, final TypeLoader<T> loader,
+                                              int maxDocTerms) throws IOException {
 
       loader.init();
 
       field = StringHelper.intern(field);
       final int[] docTermCounts = new int[reader.maxDoc()];
       final boolean[] multiValued = {false};
+      final int[] termCount= {0};
 
 
       // first sweep, fill in docTermCounts
+      // we do need to collect terms here as that what stops iteration in numerical values.
 
       readTermsAndDocs(reader, field, new TermsAndDocsProcessor() {
          @Override
-         public void startTerm(String term) {
+         public boolean startTerm(String term) {
+            loader.collectTerm(term); // may stop iteration.
+            termCount[0]++;
+            return true;
          }
 
          @Override
          public void addDoc(int doc) {
             if (docTermCounts[doc] > 0) multiValued[0] = true;
             docTermCounts[doc]++;
+
          }
       });
 
       logger.debug("Field {} initial scan done. Proclaimed {}",field, multiValued[0] ? "multi_valued" : "single_valued");
 
       if (multiValued[0]) {
+
+
+         logger.debug("resetting doc with too many terms");
+         for (int i=0;i<docTermCounts.length;i++) {
+            if (docTermCounts[i] > maxDocTerms) docTermCounts[i] =0; // reset.
+         }
+
+
          MultiValueOrdinalArray ordinalsArray = new MultiValueOrdinalArray(docTermCounts);
          final MultiValueOrdinalArray.OrdinalLoader ordinalLoader = ordinalsArray.createLoader();
 
@@ -51,13 +64,15 @@ public class CompactFieldDataLoader {
             int t=0;
 
             @Override
-            public void startTerm(String term) {
+            public boolean startTerm(String term) {
+               if (t>=termCount[0]) return false;
                t++;
-               loader.collectTerm(term);
+               return true;
             }
 
             @Override
             public void addDoc(int doc) {
+               if (docTermCounts[doc] == 0) return; // ignore docs with to many terms
                ordinalLoader.addDocOrdinal(doc,t);
             }
          });
@@ -72,9 +87,10 @@ public class CompactFieldDataLoader {
 
             int t=0;
             @Override
-            public void startTerm(String term) {
+            public boolean startTerm(String term) {
+               if (t>=termCount[0]) return false;
                t++;
-               loader.collectTerm(term);
+               return true;
             }
 
             @Override
@@ -88,7 +104,8 @@ public class CompactFieldDataLoader {
 
    private static interface TermsAndDocsProcessor {
 
-      void startTerm(String term);
+      // return false to stop iteration
+      boolean startTerm(String term);
       void addDoc(int doc);
    }
 
@@ -105,7 +122,7 @@ public class CompactFieldDataLoader {
          do {
             Term term = termEnum.term();
             if (term == null || term.field() != field) break;
-            processor.startTerm(term.text());
+            if (!processor.startTerm(term.text())) break;
             termDocs.seek(termEnum);
             int number = termDocs.read(docs, freqs);
             while (number > 0) {
