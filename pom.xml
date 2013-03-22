@@ -34,24 +34,6 @@
 			</dependencies>
 		</profile>
         <profile>
-			<id>0.20.2</id>
-			<activation>
-				<property>
-					<name>env.ES</name>
-					<value>0.20.2</value>
-				</property>
-			</activation>
-			<dependencies>
-				<dependency>
-					<!-- hard requirement for testing -->
-					<groupId>org.elasticsearch</groupId>
-					<artifactId>elasticsearch</artifactId>
-					<version>[0.20.2]</version>
-					<scope>provided</scope>
-				</dependency>
-			</dependencies>
-		</profile>
-        <profile>
             <id>0.20.4</id>
             <activation>
                 <property>
@@ -65,6 +47,24 @@
                     <groupId>org.elasticsearch</groupId>
                     <artifactId>elasticsearch</artifactId>
                     <version>[0.20.4]</version>
+                    <scope>provided</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>0.20.5</id>
+            <activation>
+                <property>
+                    <name>env.ES</name>
+                    <value>0.20.5</value>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <!-- hard requirement for testing -->
+                    <groupId>org.elasticsearch</groupId>
+                    <artifactId>elasticsearch</artifactId>
+                    <version>[0.20.5]</version>
                     <scope>provided</scope>
                 </dependency>
             </dependencies>

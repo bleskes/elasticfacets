@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.equalToIgnoringCase;
 /**
  *
  */
-public class HashedStringFacetFixedDistribTest extends AbstractFacetTest {
+public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
    protected long documentCount =0;
 
    protected void loadData() {
@@ -65,7 +65,7 @@ public class HashedStringFacetFixedDistribTest extends AbstractFacetTest {
 
 			assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
 
-			TermsFacet facet = searchResponse.facets().facet("facet1");
+         TermsFacet facet = searchResponse.facets().facet("facet1");
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(getFacetSize()));
 			//assertThat(facet.totalCount(),equalTo(documentCount)); 
@@ -97,11 +97,11 @@ public class HashedStringFacetFixedDistribTest extends AbstractFacetTest {
 
 			assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
 
-			TermsFacet facet = searchResponse.facets().facet("facet1");
+         TermsFacet facet = searchResponse.facets().facet("facet1");
 			logFacet(facet);
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(facet_size));
-			//assertThat(facet.totalCount(),equalTo(documentCount)); 
+			//assertThat(facet.totalCount(),equalTo(documentCount));
 			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
 
 			for (int term=maxTermCount()-facet_size+1;term<=maxTermCount();term++) {
@@ -135,7 +135,7 @@ public class HashedStringFacetFixedDistribTest extends AbstractFacetTest {
 			TermsFacet facet = searchResponse.facets().facet("facet1");
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(facet_size));
-			//assertThat(facet.totalCount(),equalTo(documentCount)); 
+			//assertThat(facet.totalCount(),equalTo(documentCount));
 			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
 			
 			int maxTermInFacet = maxTermCount()-2;

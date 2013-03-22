@@ -11,7 +11,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 
-public class TokenizerHashedStringFacetTest extends AbstractFacetTest {
+public class HashedStringsFacetTokenizerTest extends AbstractFacetTest {
 
 	@Override
 	protected void loadData() throws Exception {

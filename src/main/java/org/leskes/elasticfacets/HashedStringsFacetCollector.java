@@ -2,16 +2,11 @@
 package org.leskes.elasticfacets;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
-import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
-import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.collect.ImmutableSet;
-import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.Lucene;
@@ -23,9 +18,6 @@ import org.elasticsearch.script.SearchScript;
 import org.elasticsearch.search.facet.AbstractFacetCollector;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.terms.TermsFacet;
-import org.elasticsearch.search.facet.terms.TermsFacet.Entry;
-import org.elasticsearch.search.facet.terms.strings.InternalStringTermsFacet;
-import org.elasticsearch.search.facet.terms.strings.InternalStringTermsFacet.StringEntry;
 import org.elasticsearch.search.facet.terms.support.EntryPriorityQueue;
 import org.elasticsearch.search.internal.SearchContext;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
@@ -40,10 +32,10 @@ import java.util.Map;
 /**
  *
  */
-public class HashedStringFacetCollector extends AbstractFacetCollector {
+public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
 	final static ESLogger logger = Loggers
-			.getLogger(HashedStringFacetCollector.class);
+			.getLogger(HashedStringsFacetCollector.class);
 
 	
     private final FieldDataCache fieldDataCache;
@@ -80,9 +72,9 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final ImmutableSet<Integer> excluded;
 
-   public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms,
-    								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
-    								  Map<String, Object> params) {
+   public HashedStringsFacetCollector(String facetName, String fieldName, int size, int fetch_size, TermsFacet.ComparatorType comparatorType, boolean allTerms,
+                                      ImmutableSet<Integer> excluded, String output_script, String output_scriptLang, SearchContext context,
+                                      Map<String, Object> params) {
         super(facetName);
         this.fieldDataCache = context.fieldDataCache();
         this.size = size;
@@ -112,7 +104,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         }
         
         if (TermsFacet.ComparatorType.TERM.id() == comparatorType.id()) {
-            throw new ElasticSearchIllegalArgumentException("HashedStringFacet doesn't support sorting by term.");
+            throw new ElasticSearchIllegalArgumentException("HashedStringsFacet doesn't support sorting by term.");
         	
         }
         
@@ -221,24 +213,28 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
                 	if (excluded != null && excluded.contains(value)) {
                         continue;
                     }
-                    HashedStringEntry entry = new HashedStringEntry(value,docId, count);
+                    HashedStringsFacet.HashedStringEntry entry = new HashedStringsFacet.HashedStringEntry(null, value,docId, count);
                     ordered.insertWithOverflow(entry);
                 }
             }
-            InternalStringTermsFacet.StringEntry[] list = new InternalStringTermsFacet.StringEntry[ordered.size()];
+            HashedStringsFacet.HashedStringEntry[] list = new  HashedStringsFacet.HashedStringEntry[ordered.size()];
             for (int i = ordered.size() - 1; i >= 0; i--) {
-                list[i] = convertHashEntryToStringEntry((HashedStringEntry)ordered.pop());
+               HashedStringsFacet.HashedStringEntry entry = (HashedStringsFacet.HashedStringEntry)ordered.pop();
+               loadTermIntoEntry(entry);
+               list[i] = entry;
+
+
             }
 
             for (ReaderAggregator aggregator : aggregators) {
             	aggregator.close();
             }
 
-            return new InternalStringTermsFacet(facetName, comparatorType, size, Arrays.asList(list), missing, total);
+            return new HashedStringsFacet(facetName, comparatorType, size, Arrays.asList(list), missing, total);
         }
         
         // TODO
-        throw new UnsupportedOperationException("Large facet sizes (> 5000) are not yet implemented by HashedStringFacet");
+        throw new UnsupportedOperationException("Large facet sizes (> 5000) are not yet implemented by HashedStringsFacet");
 
 //        BoundedTreeSet<InternalStringTermsFacet.StringEntry> ordered = new BoundedTreeSet<InternalStringTermsFacet.StringEntry>(comparatorType.comparator(), size);
 //
@@ -277,93 +273,31 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 //        return new InternalStringTermsFacet(facetName, comparatorType, size, ordered, missing, total);
     }
 
-    private StringEntry convertHashEntryToStringEntry(HashedStringEntry hashedEntry) {
-    	String term = getTermFromDoc(hashedEntry.docId,hashedEntry.termHash);
+    private void loadTermIntoEntry(HashedStringsFacet.HashedStringEntry hashedEntry) {
+       if (output_script == null) {
+          hashedEntry.loadTermFromDoc(context,indexFieldName,fieldIndexAnalyzer);
+       }
+       else {
+          int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
+          IndexReader subReader = context.searcher().subReaders()[readerIndex];
+          int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
+          output_script.setNextReader(subReader);
+          output_script.setNextDocId(subDoc);
+
+          Object value;
+          value = output_script.run();
+          value = output_script.unwrap(value);
+          hashedEntry.setTerm((String)value);
+
+       }
+
+
     	if (logger.isTraceEnabled())
     		logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
-    				term,hashedEntry.termHash,HashedStringFieldType.hashCode(term),hashedEntry.count(),hashedEntry.docId);
-    	return new StringEntry(term, hashedEntry.count());
-		
+    				hashedEntry.term(),hashedEntry.getTermHash(),HashedStringFieldType.hashCode(hashedEntry.term()),
+                  hashedEntry.count(),hashedEntry.getDocId());
+
 	}
-    
-    
-    // Stolen for FetchPhase execute. Watch out for changes there
-    private String getTermFromDoc(int docId,int termHash) {
-    	int readerIndex = context.searcher().readerIndex(docId);
-        IndexReader subReader = context.searcher().subReaders()[readerIndex];
-        int subDoc = docId - context.searcher().docStarts()[readerIndex];
-        if (output_script == null) {
-            context.lookup().setNextReader(subReader);
-            context.lookup().setNextDocId(subDoc);
-            String candidate;
-        	Object value = context.lookup().source().extractValue(this.indexFieldName);
-        	if (value instanceof ArrayList<?>) {
-        		for (Object v : (ArrayList<?>)value) {
-                    if (v == null) continue;
-        			candidate = analyzeStringForTerm(v.toString(),termHash);
-        			if (candidate != null)
-        				return candidate;
-        		}
-        	}
-        	else if (value != null) {
-        		candidate =  analyzeStringForTerm(value.toString(),termHash);
-    			if (candidate != null)
-    				return candidate;
-        	}
-        	
-    		throw new ElasticSearchIllegalStateException(
-                    "Failed to find hash code "+termHash+" in an array of docId "+docId +
-                    ". You can only analyzed stored fields or when you store the original document under _source");
-        }
-        else {
-        	output_script.setNextReader(subReader);
-        	output_script.setNextDocId(subDoc);
-
-            Object value;
-            value = output_script.run();
-            value = output_script.unwrap(value);
-            return value.toString();
-        }
-    }
-    
-    private String analyzeStringForTerm(String fieldValue,int termHash) {
-        TokenStream stream = null;
-        if (HashedStringFieldType.hashCode(fieldValue) == termHash) 
-        	return fieldValue; // you never know :)
-        
-        String ret = null;
-        try {
-            stream = fieldIndexAnalyzer.reusableTokenStream(indexFieldName, new FastStringReader(fieldValue));
-            stream.reset();
-            CharTermAttribute term = stream.addAttribute(CharTermAttribute.class);
-//            PositionIncrementAttribute posIncr = stream.addAttribute(PositionIncrementAttribute.class);
-//            OffsetAttribute offset = stream.addAttribute(OffsetAttribute.class);
-//            TypeAttribute type = stream.addAttribute(TypeAttribute.class);
-
-            while (stream.incrementToken()) {
-                ret = term.toString();
-                logger.trace("Considering {} for hash code {}",ret,termHash);
-                if (HashedStringFieldType.hashCode(ret) == termHash) {
-                	logger.trace("Matched!");
-                	break;
-                }
-            	ret = null;
-            }
-            stream.end();
-        } catch (IOException e) {
-            throw new ElasticSearchException("failed to analyze", e);
-        } finally {
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-        return ret;
-    }
-   
 
 	public static class ReaderAggregator implements FieldData.OrdinalInDocProc {
 
@@ -412,54 +346,6 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         }
     }
     
-    public static class HashedStringEntry implements Entry {
-
-        private int termHash;
-        private int count;
-        private int docId;
-
-        public HashedStringEntry(int termHash, int docId, int count) {
-            this.termHash = termHash;
-            this.count = count;
-            this.docId = docId;
-        }
-
-        public int count() {
-            return count;
-        }
-
-        public int getCount() {
-            return count();
-        }
-
-        public int compareTo(Entry o) {
-        	HashedStringEntry ho = (HashedStringEntry) o;
-            int i = termHash > ho.termHash ? +1 : termHash < ho.termHash ? -1 : 0; 
-            if (i == 0) {
-                i = count - o.count();
-                if (i == 0) {
-                    i = System.identityHashCode(this) - System.identityHashCode(o);
-                }
-            }
-            return i;
-        }
-        
-		public String term() {
-			throw new UnsupportedOperationException();
-		}
-
-		public String getTerm() {
-			throw new UnsupportedOperationException();
-		}
-
-		public Number termAsNumber() {
-			throw new UnsupportedOperationException();
-		}
-
-		public Number getTermAsNumber() {
-			throw new UnsupportedOperationException();
-		}
-    }
 
     public static class AggregatorPriorityQueue extends PriorityQueue<ReaderAggregator> {
 

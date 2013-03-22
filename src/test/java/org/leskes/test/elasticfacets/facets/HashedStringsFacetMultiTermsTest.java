@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  *
  */
-public class HashedStringFacetMultiTermsTest extends AbstractFacetTest {
+public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 
    protected long documentCount =0;
 	

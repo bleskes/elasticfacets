@@ -14,7 +14,7 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  *
  */
-public class SimpleHashedStringFacetTest extends AbstractFacetTest {
+public class HashedStringsFacetSimpleTest extends AbstractFacetTest {
 
 	
 	

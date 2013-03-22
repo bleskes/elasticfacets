@@ -1,9 +1,5 @@
 package org.leskes.elasticfacets;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
 import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
@@ -18,15 +14,20 @@ import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.elasticsearch.search.internal.SearchContext;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
 
-public class HashedStringFacetProcessor extends AbstractComponent implements
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+public class HashedStringsFacetProcessor extends AbstractComponent implements
 		FacetProcessor {
 
 	final static ESLogger logger = Loggers
-			.getLogger(HashedStringFacetProcessor.class);
+			.getLogger(HashedStringsFacetProcessor.class);
 
 	@Inject
-	public HashedStringFacetProcessor(Settings settings) {
+	public HashedStringsFacetProcessor(Settings settings) {
 		super(settings);
+      HashedStringsFacet.registerStreams();
 	}
 
 
@@ -84,17 +85,18 @@ public class HashedStringFacetProcessor extends AbstractComponent implements
         
         if (fetch_size == -1) fetch_size = size;
 
-        return new HashedStringFacetCollector(facetName, field, size, fetch_size, comparatorType,allTerms,excluded,output_script,output_scriptLang,context,params);
+        return new HashedStringsFacetCollector(facetName, field, size, fetch_size, comparatorType,allTerms,excluded,output_script,output_scriptLang,context,params);
     }
 
 	public String[] types() {
-		return new String[] { "hashed_terms" };
+		return new String[] { HashedStringsFacet.TYPE };
 	}
 
-
-	public Facet reduce(String name, List<Facet> facets) {
-		throw new RuntimeException("HashedStringFacets uses the String facet infrastructure. This should never be seen. ");
-	}
+   @Override
+   public Facet reduce(String name, List<Facet> facets) {
+      HashedStringsFacet first = (HashedStringsFacet) facets.get(0);
+      return first.reduce(name, facets);
+   }
 
 
 }
