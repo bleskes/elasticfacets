@@ -18,11 +18,12 @@ public class HashedStringsFacetMultiValueFixedDistribTest extends
 		for (int i=max_term_count;i>=1;i--) {
 			StringBuilder SB = new StringBuilder("[");
 			SB.append("\"").append(getTerm(i,i % 2 == 0)).append("\"");
+         fieldTokenCount++;
 			for (int j=i+1;j<=max_term_count;j++) {
 				SB.append(", \"");
 				SB.append(getTerm(j,i % 2 == 0));
 				SB.append("\"");
-				
+            fieldTokenCount++;
 			}
 			SB.append("]");
 			
