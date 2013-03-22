@@ -56,7 +56,11 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
                 if ("exclude".equals(currentFieldName)) {
                     ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
-                        builder.add(HashedStringFieldType.hashCode(parser.text()));
+                       if (token == XContentParser.Token.VALUE_NUMBER) {
+                          builder.add(parser.intValue());
+                       }
+                       else
+                           builder.add(HashedStringFieldType.hashCode(parser.text()));
                     }
                     excluded = builder.build();
                 }

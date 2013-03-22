@@ -3,6 +3,7 @@ package org.leskes.test.elasticfacets.facets;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.search.facet.terms.TermsFacet;
+import org.leskes.elasticfacets.fields.HashedStringFieldType;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -101,7 +102,7 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 			logFacet(facet);
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(facet_size));
-			//assertThat(facet.totalCount(),equalTo(documentCount));
+         assertThat(facet.totalCount(),equalTo(documentCount-facet.missingCount()));
 			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
 
 			for (int term=maxTermCount()-facet_size+1;term<=maxTermCount();term++) {
@@ -125,8 +126,9 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 					.setSearchType(SearchType.COUNT)
 					.setFacets(
 							String.format("{ \"facet1\": { \"hashed_terms\" : " +
-									"{ \"field\": \"tag\", \"size\": %s,\"fetch_size\" : %s , \"exclude\": [ \"%s\" , \"%s\"] } } }",
-									facet_size,maxTermCount(), getTerm(maxTermCount()),getTerm(maxTermCount()-1))
+									"{ \"field\": \"tag\", \"size\": %s,\"fetch_size\" : %s , \"exclude\": [ \"%s\" , %s] } } }",
+									facet_size,maxTermCount(), getTerm(maxTermCount()),
+                             HashedStringFieldType.hashCode(getTerm(maxTermCount() - 1)))
 								.getBytes("UTF-8"))
 					.execute().actionGet();
 
@@ -135,7 +137,7 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 			TermsFacet facet = searchResponse.facets().facet("facet1");
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(facet_size));
-			//assertThat(facet.totalCount(),equalTo(documentCount));
+			assertThat(facet.totalCount(),equalTo(documentCount-facet.missingCount()));
 			assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
 			
 			int maxTermInFacet = maxTermCount()-2;
