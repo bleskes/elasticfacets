@@ -249,7 +249,7 @@ public class HashedStringFieldDataTest {
       IndexReader reader = IndexReader.open(indexWriter, true);
 
       MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
-              .load(reader, "mvalue");
+              .load(reader, "mvalue?max_doc_terms=199");
 
       assertThat(sFieldData.hasValue(0),equalTo(false));
       assertThat(sFieldData.hasValue(1),equalTo(true));

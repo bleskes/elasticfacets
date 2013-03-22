@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.equalToIgnoringCase;
 /**
  *
  */
-public class FixedDistribHashedStringFacetTest extends AbstractFacetTest {
+public class HashedStringFacetFixedDistribTest extends AbstractFacetTest {
    protected long documentCount =0;
 
    protected void loadData() {
@@ -80,7 +80,6 @@ public class FixedDistribHashedStringFacetTest extends AbstractFacetTest {
 		}
 	}
 
-	
 	
 	@Test
 	public void OutputScriptTest() throws Exception {

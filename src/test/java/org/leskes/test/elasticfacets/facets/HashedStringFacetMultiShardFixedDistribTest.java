@@ -3,7 +3,7 @@ package org.leskes.test.elasticfacets.facets;
 import org.testng.annotations.Test;
 
 @Test
-public class FixedDistribHashedStringFacetMultiShardTest extends FixedDistribHashedStringFacetTest {
+public class HashedStringFacetMultiShardFixedDistribTest extends HashedStringFacetFixedDistribTest {
 
 	@Override
 	protected int numberOfShards() {

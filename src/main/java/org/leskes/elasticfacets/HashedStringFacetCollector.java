@@ -49,6 +49,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
     private final FieldDataCache fieldDataCache;
 
     private final String indexFieldName;
+    private final String indexFieldNameWithParams;
 
     private Analyzer fieldIndexAnalyzer;
 
@@ -79,7 +80,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
     private final ImmutableSet<Integer> excluded;
 
-    public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms, 
+   public HashedStringFacetCollector(String facetName, String fieldName, int size,int fetch_size,TermsFacet.ComparatorType comparatorType, boolean allTerms,
     								  ImmutableSet<Integer> excluded,String output_script, String output_scriptLang, SearchContext context, 
     								  Map<String, Object> params) {
         super(facetName);
@@ -89,6 +90,13 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
         this.comparatorType = comparatorType;
         this.numberOfShards = context.numberOfShards();
         this.context = context;
+
+        String fieldParams = "";
+        int i=  fieldName.indexOf("?");
+        if (i>0) {
+           fieldParams = fieldName.substring(i+1);
+           fieldName = fieldName.substring(0,i);
+        }
 
         MapperService.SmartNameFieldMappers smartMappers = context.smartFieldMappers(fieldName);
         if (smartMappers == null || !smartMappers.hasMapper()) {
@@ -116,6 +124,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
 
 
         this.indexFieldName = smartMappers.mapper().names().indexName();
+        this.indexFieldNameWithParams = fieldParams.isEmpty() ? this.indexFieldName : this.indexFieldName + "?" + fieldParams;
         this.fieldDataType = smartMappers.mapper().fieldDataType();
         
         
@@ -149,7 +158,7 @@ public class HashedStringFacetCollector extends AbstractFacetCollector {
             }
         }
         fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader,
-                indexFieldName);
+                indexFieldNameWithParams);
         current = new ReaderAggregator(fieldData, docBase);
     }
 
