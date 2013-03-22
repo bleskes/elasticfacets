@@ -151,4 +151,36 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 		}
 	}
 
+   @Test
+   public void IncludeTest() throws Exception {
+      int facet_size = 10;
+
+      for (int i = 0; i < numberOfRuns(); i++) {
+         SearchResponse searchResponse = client
+                 .prepareSearch()
+                 .setSearchType(SearchType.COUNT)
+                 .setFacets(
+                         String.format("{ \"facet1\": { \"hashed_terms\" : " +
+                                 "{ \"field\": \"tag\", \"size\": %s,\"fetch_size\" : %s , \"include\": [ \"%s\" , %s] } } }",
+                                 facet_size,maxTermCount(), getTerm(maxTermCount()),
+                                 HashedStringFieldType.hashCode(getTerm(maxTermCount() - 1)))
+                                 .getBytes("UTF-8"))
+                 .execute().actionGet();
+
+         assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
+
+         TermsFacet facet = searchResponse.facets().facet("facet1");
+         assertThat(facet.name(), equalTo("facet1"));
+         assertThat(facet.entries().size(), equalTo(2));
+         assertThat(facet.totalCount(),equalTo(documentCount-facet.missingCount()));
+         assertThat(facet.missingCount(),equalTo(1L)); // one missing doc.
+
+         assertThat(facet.entries().get(0).term(),equalToIgnoringCase(getTerm(maxTermCount())));
+         assertThat(facet.entries().get(0).count(),equalTo(maxTermCount()));
+         assertThat(facet.entries().get(1).term(),equalToIgnoringCase(getTerm(maxTermCount()-1)));
+         assertThat(facet.entries().get(1).count(),equalTo(maxTermCount()-1));
+
+      }
+   }
+
 }

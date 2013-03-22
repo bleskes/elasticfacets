@@ -34,207 +34,221 @@ import java.util.Map;
  */
 public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
-	final static ESLogger logger = Loggers
-			.getLogger(HashedStringsFacetCollector.class);
+   final static ESLogger logger = Loggers
+           .getLogger(HashedStringsFacetCollector.class);
 
-	
-    private final FieldDataCache fieldDataCache;
 
-    private final String indexFieldName;
-    private final String indexFieldNameWithParams;
+   private final FieldDataCache fieldDataCache;
 
-    private Analyzer fieldIndexAnalyzer;
+   private final String indexFieldName;
+   private final String indexFieldNameWithParams;
 
-    private final TermsFacet.ComparatorType comparatorType;
+   private Analyzer fieldIndexAnalyzer;
 
-    private final int size;
+   private final TermsFacet.ComparatorType comparatorType;
 
-    private int fetch_size;
+   private final int size;
 
-    private final int numberOfShards;
+   private int fetch_size;
 
-    private final int minCount;
+   private final int numberOfShards;
 
-    private final FieldDataType fieldDataType;
+   private final int minCount;
 
-    private HashedStringFieldData fieldData;
+   private final FieldDataType fieldDataType;
 
-    private final List<ReaderAggregator> aggregators;
+   private HashedStringFieldData fieldData;
 
-    private ReaderAggregator current;
-    
-    private final SearchContext context;
-    
-    private final SearchScript output_script;
+   private final List<ReaderAggregator> aggregators;
 
-    long missing;
-    long total;
+   private ReaderAggregator current;
 
-    private final ImmutableSet<Integer> excluded;
+   private final SearchContext context;
 
-   public HashedStringsFacetCollector(String facetName, String fieldName, int size, int fetch_size, TermsFacet.ComparatorType comparatorType, boolean allTerms,
-                                      ImmutableSet<Integer> excluded, String output_script, String output_scriptLang, SearchContext context,
+   private final SearchScript output_script;
+
+   long missing;
+   long total;
+
+   private final ImmutableSet<Integer> excluded;
+   private final ImmutableSet<Integer> included;
+
+   public HashedStringsFacetCollector(String facetName, String fieldName, int size, int fetch_size,
+                                      TermsFacet.ComparatorType comparatorType, boolean allTerms,
+                                      ImmutableSet<Integer> included, ImmutableSet<Integer> excluded,
+                                      String output_script, String output_scriptLang, SearchContext context,
                                       Map<String, Object> params) {
-        super(facetName);
-        this.fieldDataCache = context.fieldDataCache();
-        this.size = size;
-        this.fetch_size = fetch_size;
-        this.comparatorType = comparatorType;
-        this.numberOfShards = context.numberOfShards();
-        this.context = context;
+      super(facetName);
+      this.fieldDataCache = context.fieldDataCache();
+      this.size = size;
+      this.fetch_size = fetch_size;
+      this.comparatorType = comparatorType;
+      this.numberOfShards = context.numberOfShards();
+      this.context = context;
 
-        String fieldParams = "";
-        int i=  fieldName.indexOf("?");
-        if (i>0) {
-           fieldParams = fieldName.substring(i+1);
-           fieldName = fieldName.substring(0,i);
-        }
+      String fieldParams = "";
+      int i = fieldName.indexOf("?");
+      if (i > 0) {
+         fieldParams = fieldName.substring(i + 1);
+         fieldName = fieldName.substring(0, i);
+      }
 
-        MapperService.SmartNameFieldMappers smartMappers = context.smartFieldMappers(fieldName);
-        if (smartMappers == null || !smartMappers.hasMapper()) {
-            throw new ElasticSearchIllegalArgumentException("Field [" + fieldName + "] doesn't have a type, can't run hashed string facet collector on it");
-        }
-        // add type filter if there is exact doc mapper associated with it
-        if (smartMappers.explicitTypeInNameWithDocMapper()) {
-            setFilter(context.filterCache().cache(smartMappers.docMapper().typeFilter()));
-        }
+      MapperService.SmartNameFieldMappers smartMappers = context.smartFieldMappers(fieldName);
+      if (smartMappers == null || !smartMappers.hasMapper()) {
+         throw new ElasticSearchIllegalArgumentException(
+                 "Field [" + fieldName + "] doesn't have a type, can't run hashed string facet collector on it");
+      }
+      // add type filter if there is exact doc mapper associated with it
+      if (smartMappers.explicitTypeInNameWithDocMapper()) {
+         setFilter(context.filterCache().cache(smartMappers.docMapper().typeFilter()));
+      }
 
-        if (smartMappers.mapper().fieldDataType() != FieldDataType.DefaultTypes.STRING) {
-            throw new ElasticSearchIllegalArgumentException("Field [" + fieldName + "] is not of string type, can't run hashed string facet collector on it");
-        }
-        
-        if (TermsFacet.ComparatorType.TERM.id() == comparatorType.id()) {
-            throw new ElasticSearchIllegalArgumentException("HashedStringsFacet doesn't support sorting by term.");
-        	
-        }
-        
-        if (output_script != null) {
-            this.output_script = context.scriptService().search(context.lookup(), output_scriptLang, output_script, params);
-        } else {
-            this.output_script = null;
-        }
+      if (smartMappers.mapper().fieldDataType() != FieldDataType.DefaultTypes.STRING) {
+         throw new ElasticSearchIllegalArgumentException(
+                 "Field [" + fieldName + "] is not of string type, can't run hashed string facet collector on it");
+      }
+
+      if (TermsFacet.ComparatorType.TERM.id() == comparatorType.id()) {
+         throw new ElasticSearchIllegalArgumentException("HashedStringsFacet doesn't support sorting by term.");
+
+      }
+
+      if (output_script != null) {
+         this.output_script = context.scriptService().search(context.lookup(), output_scriptLang, output_script, params);
+      } else {
+         this.output_script = null;
+      }
 
 
-        this.indexFieldName = smartMappers.mapper().names().indexName();
-        this.indexFieldNameWithParams = fieldParams.isEmpty() ? this.indexFieldName : this.indexFieldName + "?" + fieldParams;
-        this.fieldDataType = smartMappers.mapper().fieldDataType();
-        
-        
-        this.fieldIndexAnalyzer = smartMappers.mapper().indexAnalyzer();
-        if (this.fieldIndexAnalyzer == null &&  smartMappers.docMapper() != null) this.fieldIndexAnalyzer = smartMappers.docMapper().indexAnalyzer() ;
-        if (this.fieldIndexAnalyzer == null ) this.fieldIndexAnalyzer = Lucene.STANDARD_ANALYZER;
+      this.indexFieldName = smartMappers.mapper().names().indexName();
+      this.indexFieldNameWithParams = fieldParams.isEmpty() ? this.indexFieldName : this.indexFieldName + "?" + fieldParams;
+      this.fieldDataType = smartMappers.mapper().fieldDataType();
 
-        if (excluded == null || excluded.isEmpty()) {
-            this.excluded = null;
-        } else {
-            this.excluded = excluded;
-        }
 
-        // minCount is offset by -1
-        if (allTerms) {
-            minCount = -1;
-        } else {
-            minCount = 0;
-        }
+      this.fieldIndexAnalyzer = smartMappers.mapper().indexAnalyzer();
+      if (this.fieldIndexAnalyzer == null && smartMappers.docMapper() != null)
+         this.fieldIndexAnalyzer = smartMappers.docMapper().indexAnalyzer();
+      if (this.fieldIndexAnalyzer == null) this.fieldIndexAnalyzer = Lucene.STANDARD_ANALYZER;
 
-        this.aggregators = new ArrayList<ReaderAggregator>(context.searcher().subReaders().length);
-    }
+      if (excluded == null || excluded.isEmpty()) {
+         this.excluded = null;
+      } else {
+         this.excluded = excluded;
+      }
+      if (included == null || included.isEmpty()) {
+         this.included = null;
+      } else {
+         this.included = included;
+      }
 
-    @Override
-    protected void doSetNextReader(IndexReader reader, int docBase) throws IOException {
-        if (current != null) {
-            missing += current.missing;
-            total += current.total;
-            if (current.values.length > 0) {
-                aggregators.add(current);
+      // minCount is offset by -1
+      if (allTerms) {
+         minCount = -1;
+      } else {
+         minCount = 0;
+      }
+
+      this.aggregators = new ArrayList<ReaderAggregator>(context.searcher().subReaders().length);
+   }
+
+   @Override
+   protected void doSetNextReader(IndexReader reader, int docBase) throws IOException {
+      if (current != null) {
+         missing += current.missing;
+         total += current.total;
+         if (current.values.length > 0) {
+            aggregators.add(current);
+         }
+      }
+      fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader,
+              indexFieldNameWithParams);
+      current = new ReaderAggregator(fieldData, docBase);
+   }
+
+   @Override
+   protected void doCollect(int doc) throws IOException {
+      fieldData.forEachOrdinalInDoc(doc, current);
+   }
+
+
+   @Override
+   public Facet facet() {
+      if (current != null) {
+         missing += current.missing;
+         total += current.total;
+         // if we have values for this one, add it
+         if (current.values.length > 0) {
+            aggregators.add(current);
+         }
+      }
+
+      AggregatorPriorityQueue queue = new AggregatorPriorityQueue(aggregators.size());
+
+      for (ReaderAggregator aggregator : aggregators) {
+         if (aggregator.nextPosition()) {
+            queue.add(aggregator);
+         }
+      }
+
+      // if there is one shard, there will not be a reduce phase, so we must not deliver too much
+      int queue_size = numberOfShards == 1 ? size : fetch_size;
+
+      // YACK, we repeat the same logic, but once with an optimizer priority queue for smaller sizes
+      if (queue_size < EntryPriorityQueue.LIMIT) {
+         // optimize to use priority size
+         EntryPriorityQueue ordered = new EntryPriorityQueue(queue_size, comparatorType.comparator());
+
+         while (queue.size() > 0) {
+            ReaderAggregator agg = queue.top();
+            int value = agg.currentValue;
+            int count = 0;
+            int docId = agg.currentDocId;
+            do {
+               if (agg.currentCount != 0) {
+                  count += agg.currentCount;
+                  docId = agg.currentDocId;
+               }
+
+               if (agg.nextPosition()) {
+                  agg = queue.updateTop();
+               } else {
+                  // we are done with this reader
+                  queue.pop();
+                  agg = queue.top();
+               }
+            } while (agg != null && value == agg.currentValue);
+
+            assert (agg == null || value < agg.currentValue);
+
+            if (count > minCount) {
+               if (excluded != null && excluded.contains(value)) {
+                  continue;
+               }
+               if (included != null && !included.contains(value)) {
+                  continue;
+               }
+               HashedStringsFacet.HashedStringEntry entry = new HashedStringsFacet.HashedStringEntry(null, value, docId, count);
+               ordered.insertWithOverflow(entry);
             }
-        }
-        fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader,
-                indexFieldNameWithParams);
-        current = new ReaderAggregator(fieldData, docBase);
-    }
-
-    @Override
-    protected void doCollect(int doc) throws IOException {
-        fieldData.forEachOrdinalInDoc(doc, current);
-    }
-    
-
-    @Override
-    public Facet facet() {
-        if (current != null) {
-            missing += current.missing;
-            total += current.total;
-            // if we have values for this one, add it
-            if (current.values.length > 0) {
-                aggregators.add(current);
-            }
-        }
-
-        AggregatorPriorityQueue queue = new AggregatorPriorityQueue(aggregators.size());
-
-        for (ReaderAggregator aggregator : aggregators) {
-            if (aggregator.nextPosition()) {
-                queue.add(aggregator);
-            }
-        }
-
-        // if there is one shard, there will not be a reduce phase, so we must not deliver too much
-        int queue_size = numberOfShards == 1 ? size : fetch_size; 
-
-        // YACK, we repeat the same logic, but once with an optimizer priority queue for smaller sizes
-        if (queue_size < EntryPriorityQueue.LIMIT) {
-            // optimize to use priority size
-            EntryPriorityQueue ordered = new EntryPriorityQueue(queue_size, comparatorType.comparator());
-
-            while (queue.size() > 0) {
-                ReaderAggregator agg = queue.top();
-                int value = agg.currentValue;
-                int count = 0;
-                int docId = agg.currentDocId;
-                do {
-                	if (agg.currentCount != 0 ) {
-                		count += agg.currentCount;
-                		docId = agg.currentDocId;
-                	}
-                    
-                    if (agg.nextPosition()) {
-                        agg = queue.updateTop();
-                    } else {
-                        // we are done with this reader
-                        queue.pop();
-                        agg = queue.top();
-                    }
-                } while (agg != null && value == agg.currentValue);
-                
-                assert (agg == null || value < agg.currentValue);
-
-                if (count > minCount) {
-                	if (excluded != null && excluded.contains(value)) {
-                        continue;
-                    }
-                    HashedStringsFacet.HashedStringEntry entry = new HashedStringsFacet.HashedStringEntry(null, value,docId, count);
-                    ordered.insertWithOverflow(entry);
-                }
-            }
-            HashedStringsFacet.HashedStringEntry[] list = new  HashedStringsFacet.HashedStringEntry[ordered.size()];
-            for (int i = ordered.size() - 1; i >= 0; i--) {
-               HashedStringsFacet.HashedStringEntry entry = (HashedStringsFacet.HashedStringEntry)ordered.pop();
-               loadTermIntoEntry(entry);
-               list[i] = entry;
+         }
+         HashedStringsFacet.HashedStringEntry[] list = new HashedStringsFacet.HashedStringEntry[ordered.size()];
+         for (int i = ordered.size() - 1; i >= 0; i--) {
+            HashedStringsFacet.HashedStringEntry entry = (HashedStringsFacet.HashedStringEntry) ordered.pop();
+            loadTermIntoEntry(entry);
+            list[i] = entry;
 
 
-            }
+         }
 
-            for (ReaderAggregator aggregator : aggregators) {
-            	aggregator.close();
-            }
+         for (ReaderAggregator aggregator : aggregators) {
+            aggregator.close();
+         }
 
-            return new HashedStringsFacet(facetName, comparatorType, size, Arrays.asList(list), missing, total);
-        }
-        
-        // TODO
-        throw new UnsupportedOperationException("Large facet sizes (> 5000) are not yet implemented by HashedStringsFacet");
+         return new HashedStringsFacet(facetName, comparatorType, size, Arrays.asList(list), missing, total);
+      }
+
+      // TODO
+      throw new UnsupportedOperationException("Large facet sizes (> 5000) are not yet implemented by HashedStringsFacet");
 
 //        BoundedTreeSet<InternalStringTermsFacet.StringEntry> ordered = new BoundedTreeSet<InternalStringTermsFacet.StringEntry>(comparatorType.comparator(), size);
 //
@@ -271,91 +285,90 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 //        }
 //
 //        return new InternalStringTermsFacet(facetName, comparatorType, size, ordered, missing, total);
-    }
+   }
 
-    private void loadTermIntoEntry(HashedStringsFacet.HashedStringEntry hashedEntry) {
-       if (output_script == null) {
-          hashedEntry.loadTermFromDoc(context,indexFieldName,fieldIndexAnalyzer);
-       }
-       else {
-          int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
-          IndexReader subReader = context.searcher().subReaders()[readerIndex];
-          int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
-          output_script.setNextReader(subReader);
-          output_script.setNextDocId(subDoc);
+   private void loadTermIntoEntry(HashedStringsFacet.HashedStringEntry hashedEntry) {
+      if (output_script == null) {
+         hashedEntry.loadTermFromDoc(context, indexFieldName, fieldIndexAnalyzer);
+      } else {
+         int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
+         IndexReader subReader = context.searcher().subReaders()[readerIndex];
+         int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
+         output_script.setNextReader(subReader);
+         output_script.setNextDocId(subDoc);
 
-          Object value;
-          value = output_script.run();
-          value = output_script.unwrap(value);
-          hashedEntry.setTerm((String)value);
+         Object value;
+         value = output_script.run();
+         value = output_script.unwrap(value);
+         hashedEntry.setTerm((String) value);
 
-       }
+      }
 
 
-    	if (logger.isTraceEnabled())
-    		logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
-    				hashedEntry.term(),hashedEntry.getTermHash(),HashedStringFieldType.hashCode(hashedEntry.term()),
-                  hashedEntry.count(),hashedEntry.getDocId());
+      if (logger.isTraceEnabled())
+         logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
+                 hashedEntry.term(), hashedEntry.getTermHash(), HashedStringFieldType.hashCode(hashedEntry.term()),
+                 hashedEntry.count(), hashedEntry.getDocId());
 
-	}
+   }
 
-	public static class ReaderAggregator implements FieldData.OrdinalInDocProc {
+   public static class ReaderAggregator implements FieldData.OrdinalInDocProc {
 
-        final int[] values;
-        final int[] counts;
-        final int[] docIdsForValues; // of every value keep a docid where we run into it.
+      final int[] values;
+      final int[] counts;
+      final int[] docIdsForValues; // of every value keep a docid where we run into it.
 
-        int position = 0; // first value is a null value.
-        int currentValue;
-        int currentDocId;
-        int currentCount;
-        int total;
-        int missing;
-        int docBase;
+      int position = 0; // first value is a null value.
+      int currentValue;
+      int currentDocId;
+      int currentCount;
+      int total;
+      int missing;
+      int docBase;
 
-        public ReaderAggregator(HashedStringFieldData fieldData,int docBase) {
-            this.values = fieldData.values();
-            this.counts = CacheRecycler.popIntArray(fieldData.values().length);
-            this.docIdsForValues = CacheRecycler.popIntArray(fieldData.values().length);
-            this.docBase = docBase;
-        }
+      public ReaderAggregator(HashedStringFieldData fieldData, int docBase) {
+         this.values = fieldData.values();
+         this.counts = CacheRecycler.popIntArray(fieldData.values().length);
+         this.docIdsForValues = CacheRecycler.popIntArray(fieldData.values().length);
+         this.docBase = docBase;
+      }
 
-        public void close() {
-			CacheRecycler.pushIntArray(counts);
-			CacheRecycler.pushIntArray(docIdsForValues);
-		}
+      public void close() {
+         CacheRecycler.pushIntArray(counts);
+         CacheRecycler.pushIntArray(docIdsForValues);
+      }
 
-		public void onOrdinal(int docId, int ordinal) {
-			if (ordinal == 0) {
-				missing++;
-				return; // no value no count..
-			}
-            counts[ordinal]++;
-            docIdsForValues[ordinal] = docId+docBase;
-            total++;
-        }
+      public void onOrdinal(int docId, int ordinal) {
+         if (ordinal == 0) {
+            missing++;
+            return; // no value no count..
+         }
+         counts[ordinal]++;
+         docIdsForValues[ordinal] = docId + docBase;
+         total++;
+      }
 
-        public boolean nextPosition() {
-            if (++position >= values.length) {
-                return false;
-            }
-            currentValue = values[position];
-            currentDocId = docIdsForValues[position];
-            currentCount = counts[position];
-            return true;
-        }
-    }
-    
+      public boolean nextPosition() {
+         if (++position >= values.length) {
+            return false;
+         }
+         currentValue = values[position];
+         currentDocId = docIdsForValues[position];
+         currentCount = counts[position];
+         return true;
+      }
+   }
 
-    public static class AggregatorPriorityQueue extends PriorityQueue<ReaderAggregator> {
 
-        public AggregatorPriorityQueue(int size) {
-            initialize(size);
-        }
+   public static class AggregatorPriorityQueue extends PriorityQueue<ReaderAggregator> {
 
-        @Override
-        protected boolean lessThan(ReaderAggregator a, ReaderAggregator b) {
-            return  a.currentValue < b.currentValue;
-        }
-    }
+      public AggregatorPriorityQueue(int size) {
+         initialize(size);
+      }
+
+      @Override
+      protected boolean lessThan(ReaderAggregator a, ReaderAggregator b) {
+         return a.currentValue < b.currentValue;
+      }
+   }
 }
