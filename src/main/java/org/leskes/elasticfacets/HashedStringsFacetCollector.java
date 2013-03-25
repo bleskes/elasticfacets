@@ -289,7 +289,9 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
    private void loadTermIntoEntry(HashedStringsFacet.HashedStringEntry hashedEntry) {
       if (output_script == null) {
-         hashedEntry.loadTermFromDoc(context, indexFieldName, fieldIndexAnalyzer);
+         String term = HashedStringFieldData.findTermInDoc(hashedEntry.getTermHash(), hashedEntry.getDocId(),
+                 indexFieldName, fieldIndexAnalyzer, context);
+         hashedEntry.setTerm(term);
       } else {
          int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
          IndexReader subReader = context.searcher().subReaders()[readerIndex];

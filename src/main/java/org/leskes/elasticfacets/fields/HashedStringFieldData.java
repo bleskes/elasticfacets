@@ -1,15 +1,23 @@
 package org.leskes.elasticfacets.fields;
 
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.IndexReader;
+import org.elasticsearch.ElasticSearchException;
+import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.ElasticSearchParseException;
 import org.elasticsearch.common.RamUsage;
+import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.trove.list.array.TIntArrayList;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
+import org.elasticsearch.search.internal.SearchContext;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 
@@ -20,7 +28,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
    public static final HashedStringFieldType HASHED_STRING = new HashedStringFieldType();
 
-   protected ESLogger logger = Loggers.getLogger(getClass());
+   protected static final ESLogger logger = Loggers.getLogger(HashedStringFieldData.class);
 
    protected final int[] values;
 
@@ -210,6 +218,69 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
          return new MultiValueHashedStringFieldData(field, sorted_hashed_terms, translatedOrdinals);
       }
+   }
+
+   public static String findTermInDoc(int termHash, int docId, String indexFieldName, Analyzer fieldIndexAnalyzer,
+                                      SearchContext context) {
+      int readerIndex = context.searcher().readerIndex(docId);
+      IndexReader subReader = context.searcher().subReaders()[readerIndex];
+      int subDoc = docId - context.searcher().docStarts()[readerIndex];
+      context.lookup().setNextReader(subReader);
+      context.lookup().setNextDocId(subDoc);
+      String candidate;
+      Object value = context.lookup().source().extractValue(indexFieldName);
+      if (value instanceof ArrayList<?>) {
+         for (Object v : (ArrayList<?>) value) {
+            if (v == null) continue;
+            candidate = analyzeStringForTerm(v.toString(), termHash, indexFieldName, fieldIndexAnalyzer);
+            if (candidate != null) {
+               return candidate;
+            }
+         }
+      } else if (value != null) {
+         candidate = analyzeStringForTerm(value.toString(), termHash, indexFieldName, fieldIndexAnalyzer);
+         if (candidate != null) {
+            return candidate;
+         }
+      }
+      throw new ElasticSearchIllegalStateException(
+              "Failed to find hash code " + termHash + " in an array of docId " + docId +
+                      ". You can only use stored fields or when you store the original document under _source");
+   }
+
+   private static String analyzeStringForTerm(String fieldValue, int termHash, String indexFieldName, Analyzer fieldIndexAnalyzer) {
+      TokenStream stream = null;
+      if (HashedStringFieldType.hashCode(fieldValue) == termHash)
+         return fieldValue; // you never know :)
+
+      String ret = null;
+      try {
+         stream = fieldIndexAnalyzer.reusableTokenStream(indexFieldName, new FastStringReader(fieldValue));
+         stream.reset();
+         CharTermAttribute term = stream.addAttribute(CharTermAttribute.class);
+
+         while (stream.incrementToken()) {
+            ret = term.toString();
+            logger.trace("Considering {} for hash code {}", ret, termHash);
+            if (HashedStringFieldType.hashCode(ret) == termHash) {
+               logger.trace("Matched!");
+               break;
+            }
+            ret = null;
+         }
+         stream.end();
+      } catch (IOException e) {
+         throw new ElasticSearchException("failed to analyze", e);
+      } finally {
+         if (stream != null) {
+            try {
+               stream.close();
+            } catch (IOException e) {
+               // ignore
+            }
+         }
+      }
+      return ret;
    }
 
 

@@ -1,15 +1,8 @@
 package org.leskes.elasticfacets;
 
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.index.IndexReader;
-import org.elasticsearch.ElasticSearchException;
-import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.collect.BoundedTreeSet;
 import org.elasticsearch.common.collect.ImmutableList;
-import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.logging.ESLogger;
@@ -22,8 +15,6 @@ import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.InternalFacet;
 import org.elasticsearch.search.facet.terms.TermsFacet;
-import org.elasticsearch.search.internal.SearchContext;
-import org.leskes.elasticfacets.fields.HashedStringFieldType;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,9 +25,9 @@ import java.util.List;
 /**
  *
  */
-public class HashedStringsFacet implements TermsFacet {
+public class HashedStringsFacet implements TermsFacet, InternalFacet{
 
-   private static final String STREAM_TYPE = "hashed_string_facet";
+   private static final String STREAM_TYPE = "hashed_terms_facet";
 
    public static void registerStreams() {
       InternalFacet.Streams.registerStream(STREAM, STREAM_TYPE);
@@ -52,6 +43,8 @@ public class HashedStringsFacet implements TermsFacet {
       return STREAM_TYPE;
    }
 
+   protected static ESLogger logger = Loggers.getLogger(HashedStringsFacet.class);
+
    public static final String TYPE = "hashed_terms";
 
    @SuppressWarnings("unchecked")
@@ -62,8 +55,6 @@ public class HashedStringsFacet implements TermsFacet {
 
 
    public static class HashedStringEntry implements TermsFacet.Entry {
-
-      final static ESLogger logger = Loggers.getLogger(HashedStringEntry.class);
 
       private String term;
       private int termHash;
@@ -141,70 +132,6 @@ public class HashedStringsFacet implements TermsFacet {
          this.count = count;
       }
 
-      public void loadTermFromDoc(SearchContext context, String indexFieldName, Analyzer fieldIndexAnalyzer) {
-         int readerIndex = context.searcher().readerIndex(docId);
-         IndexReader subReader = context.searcher().subReaders()[readerIndex];
-         int subDoc = docId - context.searcher().docStarts()[readerIndex];
-         context.lookup().setNextReader(subReader);
-         context.lookup().setNextDocId(subDoc);
-         String candidate;
-         Object value = context.lookup().source().extractValue(indexFieldName);
-         if (value instanceof ArrayList<?>) {
-            for (Object v : (ArrayList<?>) value) {
-               if (v == null) continue;
-               candidate = analyzeStringForTerm(v.toString(), termHash, indexFieldName, fieldIndexAnalyzer);
-               if (candidate != null) {
-                  term = candidate;
-                  return;
-               }
-            }
-         } else if (value != null) {
-            candidate = analyzeStringForTerm(value.toString(), termHash, indexFieldName, fieldIndexAnalyzer);
-            if (candidate != null) {
-               term = candidate;
-               return;
-            }
-
-         }
-         throw new ElasticSearchIllegalStateException(
-                 "Failed to find hash code " + termHash + " in an array of docId " + docId +
-                         ". You can only use stored fields or when you store the original document under _source");
-      }
-
-      private String analyzeStringForTerm(String fieldValue, int termHash, String indexFieldName, Analyzer fieldIndexAnalyzer) {
-         TokenStream stream = null;
-         if (HashedStringFieldType.hashCode(fieldValue) == termHash)
-            return fieldValue; // you never know :)
-
-         String ret = null;
-         try {
-            stream = fieldIndexAnalyzer.reusableTokenStream(indexFieldName, new FastStringReader(fieldValue));
-            stream.reset();
-            CharTermAttribute term = stream.addAttribute(CharTermAttribute.class);
-
-            while (stream.incrementToken()) {
-               ret = term.toString();
-               logger.trace("Considering {} for hash code {}", ret, termHash);
-               if (HashedStringFieldType.hashCode(ret) == termHash) {
-                  logger.trace("Matched!");
-                  break;
-               }
-               ret = null;
-            }
-            stream.end();
-         } catch (IOException e) {
-            throw new ElasticSearchException("failed to analyze", e);
-         } finally {
-            if (stream != null) {
-               try {
-                  stream.close();
-               } catch (IOException e) {
-                  // ignore
-               }
-            }
-         }
-         return ret;
-      }
 
       public int getDocId() {
          return docId;
