@@ -52,11 +52,11 @@
             </dependencies>
         </profile>
         <profile>
-            <id>0.20.5</id>
+            <id>0.20.6</id>
             <activation>
                 <property>
                     <name>env.ES</name>
-                    <value>0.20.5</value>
+                    <value>0.20.6</value>
                 </property>
             </activation>
             <dependencies>
@@ -64,7 +64,7 @@
                     <!-- hard requirement for testing -->
                     <groupId>org.elasticsearch</groupId>
                     <artifactId>elasticsearch</artifactId>
-                    <version>[0.20.5]</version>
+                    <version>[0.20.6]</version>
                     <scope>provided</scope>
                 </dependency>
             </dependencies>
