@@ -41,6 +41,7 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
       String output_scriptLang = null;
       String output_script = null;
       Map<String, Object> params = null;
+      HashedStringsFacetCollector.OUTPUT_MODE output_mode = null;
 
 
       ImmutableSet<Integer> excluded = ImmutableSet.of();
@@ -86,6 +87,8 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
                comparatorType = TermsFacet.ComparatorType.fromString(parser.text());
             } else if ("output_script".equals(currentFieldName)) {
                output_script = parser.text();
+            } else if ("output_mode".equals(currentFieldName)) {
+               output_mode = HashedStringsFacetCollector.OUTPUT_MODE.fromString(parser.text());
             } else if ("lang".equals(currentFieldName)) {
                output_scriptLang = parser.text();
             } else if (token == XContentParser.Token.START_OBJECT) {
@@ -98,8 +101,13 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
 
       if (fetch_size == -1) fetch_size = size;
 
-      return new HashedStringsFacetCollector(facetName, field, size, fetch_size, comparatorType, allTerms,included,
-              excluded, output_script, output_scriptLang, context, params);
+      if (output_mode == null) {
+         output_mode = (output_script != null) ? HashedStringsFacetCollector.OUTPUT_MODE.SCRIPT :
+                 HashedStringsFacetCollector.OUTPUT_MODE.TERM;
+      }
+
+      return new HashedStringsFacetCollector(facetName, field, size, fetch_size, comparatorType, allTerms,
+              output_mode, included, excluded, output_script, output_scriptLang, context, params);
    }
 
    public String[] types() {

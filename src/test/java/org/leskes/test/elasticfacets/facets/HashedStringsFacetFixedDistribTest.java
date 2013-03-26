@@ -3,12 +3,14 @@ package org.leskes.test.elasticfacets.facets;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.search.facet.terms.TermsFacet;
+import org.leskes.elasticfacets.HashedStringsFacet;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
 
 /**
  *
@@ -184,5 +186,39 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 
       }
    }
+
+   @Test
+   public void OutputModeHashTest() throws Exception {
+      int facet_size = 10;
+
+      for (int i = 0; i < numberOfRuns(); i++) {
+         SearchResponse searchResponse = client
+                 .prepareSearch()
+                 .setSearchType(SearchType.COUNT)
+                 .setFacets(
+                         String.format("{ \"facet1\": { \"hashed_terms\" : " +
+                                 "{ \"field\": \"tag\", \"size\": %s,\"fetch_size\" : %s, output_mode: \"hash\" } } }",
+                                 facet_size,maxTermCount(), getTerm(maxTermCount())
+                                 )
+                                 .getBytes("UTF-8"))
+                 .execute().actionGet();
+
+         assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
+
+         HashedStringsFacet facet = searchResponse.facets().facet("facet1");
+         assertThat(facet.name(), equalTo("facet1"));
+         assertThat(facet.entries().size(), equalTo(facet_size));
+         assertThat(facet.entries().get(0).term(),isEmptyOrNullString());
+         assertThat(facet.entries().get(0).getTermHash(),
+                 equalTo(HashedStringFieldType.hashCode(getTerm(maxTermCount()))));
+         assertThat(facet.entries().get(0).count(),equalTo(maxTermCount()));
+         assertThat(facet.entries().get(1).term(), isEmptyOrNullString());
+         assertThat(facet.entries().get(1).getTermHash(),
+                 equalTo(HashedStringFieldType.hashCode(getTerm(maxTermCount()-1))));
+         assertThat(facet.entries().get(1).count(),equalTo(maxTermCount()-1));
+
+      }
+   }
+
 
 }

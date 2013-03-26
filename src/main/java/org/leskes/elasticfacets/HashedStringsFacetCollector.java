@@ -47,6 +47,23 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
    private final TermsFacet.ComparatorType comparatorType;
 
+   public static enum OUTPUT_MODE {
+      TERM, HASH, SCRIPT;
+
+      public static OUTPUT_MODE fromString(String type) {
+         if ("term".equals(type)) {
+            return TERM;
+         } else if ("hash".equals(type)) {
+            return HASH;
+         } else if ("script".equals(type)) {
+            return SCRIPT;
+         }
+         throw new ElasticSearchIllegalArgumentException("No type argument match for hashed string facet output mode [" + type + "]");
+      }
+   }
+
+   private final OUTPUT_MODE output_mode;
+
    private final int size;
 
    private int fetch_size;
@@ -75,6 +92,7 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
    public HashedStringsFacetCollector(String facetName, String fieldName, int size, int fetch_size,
                                       TermsFacet.ComparatorType comparatorType, boolean allTerms,
+                                      OUTPUT_MODE output_mode,
                                       ImmutableSet<Integer> included, ImmutableSet<Integer> excluded,
                                       String output_script, String output_scriptLang, SearchContext context,
                                       Map<String, Object> params) {
@@ -85,6 +103,8 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
       this.comparatorType = comparatorType;
       this.numberOfShards = context.numberOfShards();
       this.context = context;
+      this.output_mode = output_mode;
+
 
       String fieldParams = "";
       int i = fieldName.indexOf("?");
@@ -288,30 +308,35 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
    }
 
    private void loadTermIntoEntry(HashedStringsFacet.HashedStringEntry hashedEntry) {
-      if (output_script == null) {
-         String term = HashedStringFieldData.findTermInDoc(hashedEntry.getTermHash(), hashedEntry.getDocId(),
-                 indexFieldName, fieldIndexAnalyzer, context);
-         hashedEntry.setTerm(term);
-      } else {
-         int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
-         IndexReader subReader = context.searcher().subReaders()[readerIndex];
-         int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
-         output_script.setNextReader(subReader);
-         output_script.setNextDocId(subDoc);
+      switch (output_mode) {
+         case HASH:
+            break;
+         case TERM:
+            String term = HashedStringFieldData.findTermInDoc(hashedEntry.getTermHash(), hashedEntry.getDocId(),
+                    indexFieldName, fieldIndexAnalyzer, context);
+            hashedEntry.setTerm(term);
+            if (logger.isTraceEnabled())
+               logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
+                       hashedEntry.term(), hashedEntry.getTermHash(), HashedStringFieldType.hashCode(hashedEntry.term()),
+                       hashedEntry.count(), hashedEntry.getDocId());
 
-         Object value;
-         value = output_script.run();
-         value = output_script.unwrap(value);
-         hashedEntry.setTerm((String) value);
+            break;
+         case SCRIPT:
+            if (output_script == null)
+               throw new ElasticSearchIllegalArgumentException(
+                       "Hashed string facet output was set to script, but no script was supplied");
+            int readerIndex = context.searcher().readerIndex(hashedEntry.getDocId());
+            IndexReader subReader = context.searcher().subReaders()[readerIndex];
+            int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
+            output_script.setNextReader(subReader);
+            output_script.setNextDocId(subDoc);
 
+            Object value;
+            value = output_script.run();
+            value = output_script.unwrap(value);
+            hashedEntry.setTerm((String) value);
+            break;
       }
-
-
-      if (logger.isTraceEnabled())
-         logger.trace("Converted hash entry: term={}, expected_hash={},real_hash={}, count={}, docId={}",
-                 hashedEntry.term(), hashedEntry.getTermHash(), HashedStringFieldType.hashCode(hashedEntry.term()),
-                 hashedEntry.count(), hashedEntry.getDocId());
-
    }
 
    public static class ReaderAggregator implements FieldData.OrdinalInDocProc {

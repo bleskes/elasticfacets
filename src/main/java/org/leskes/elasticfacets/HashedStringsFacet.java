@@ -293,7 +293,7 @@ public class HashedStringsFacet implements TermsFacet, InternalFacet{
       int size = in.readVInt();
       entries = new ArrayList<HashedStringEntry>(size);
       for (int i = 0; i < size; i++) {
-         entries.add(new HashedStringEntry(in.readString(), in.readVInt(), in.readVInt(), in.readVInt()));
+         entries.add(new HashedStringEntry(in.readOptionalString(), in.readVInt(), in.readVInt(), in.readVInt()));
       }
    }
 
@@ -306,7 +306,7 @@ public class HashedStringsFacet implements TermsFacet, InternalFacet{
 
       out.writeVInt(entries.size());
       for (HashedStringEntry entry : entries) {
-         out.writeString(entry.term);
+         out.writeOptionalString(entry.term);
          out.writeVInt(entry.termHash);
          out.writeVInt(entry.docId);
          out.writeVInt(entry.count);
