@@ -9,6 +9,7 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.index.analysis.NamedAnalyzer;
 import org.elasticsearch.index.field.data.FieldData.OrdinalInDocProc;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
@@ -293,5 +294,18 @@ public class HashedStringFieldDataTest {
 				});
 		return missing.size();
 	}
+
+   @Test
+   public void ResolvingHashTest(){
+      NamedAnalyzer analyzer = Lucene.STANDARD_ANALYZER;
+      String value = "Some text with spaces";
+      String term = HashedStringFieldData.analyzeStringForTerm(value,
+              HashedStringFieldType.hashCode("spaces"), "field", analyzer);
+      assertThat(term,equalTo("spaces"));
+      value = "Some other text with spaces and more";
+      term = HashedStringFieldData.analyzeStringForTerm(value,
+              HashedStringFieldType.hashCode("more"), "field", analyzer);
+      assertThat(term,equalTo("more"));
+   }
 
 }
