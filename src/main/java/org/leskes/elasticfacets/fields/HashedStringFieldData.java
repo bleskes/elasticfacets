@@ -248,7 +248,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
                       ". You can only use stored fields or when you store the original document under _source");
    }
 
-   private static String analyzeStringForTerm(String fieldValue, int termHash, String indexFieldName, Analyzer fieldIndexAnalyzer) {
+   public static String analyzeStringForTerm(String fieldValue, int termHash, String indexFieldName, Analyzer fieldIndexAnalyzer) {
       TokenStream stream = null;
       if (HashedStringFieldType.hashCode(fieldValue) == termHash)
          return fieldValue; // you never know :)
