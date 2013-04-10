@@ -95,7 +95,7 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 					.setSearchType(SearchType.COUNT)
 					.setFacets(
 							String.format("{ \"facet1\": { \"hashed_terms\" : " +
-									"{ \"field\": \"tag\", \"size\": %s ,\"fetch_size\" : %s ,\"output_script\" : \"_source.tag.toLowerCase()+'s'\" } } }",
+									"{ \"field\": \"tag\", \"size\": %s ,\"fetch_size\" : %s ,\"output_script\" : \"_source.tag.toLowerCase()+'|'+_hash\" } } }",
 									facet_size,maxTermCount())
 								.getBytes("UTF-8"))
 					.execute().actionGet();
@@ -111,8 +111,10 @@ public class HashedStringsFacetFixedDistribTest extends AbstractFacetTest {
 
 			for (int term=maxTermCount()-facet_size+1;term<=maxTermCount();term++) {
 				int facet_pos = maxTermCount()-term;
-				
-				assertThat(facet.entries().get(facet_pos).term(),equalTo(getTerm(term,true)+"s"));
+
+            String termS = getTerm(term,true);
+				assertThat(facet.entries().get(facet_pos).term(),equalTo(String.format("%s|%s",termS,
+                    HashedStringFieldType.hashCode(termS))));
 				assertThat(facet.entries().get(facet_pos).count(),equalTo(term));
 			}
 		}

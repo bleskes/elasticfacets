@@ -330,6 +330,7 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
             int subDoc = hashedEntry.getDocId() - context.searcher().docStarts()[readerIndex];
             output_script.setNextReader(subReader);
             output_script.setNextDocId(subDoc);
+            output_script.setNextVar("_hash",hashedEntry.hashCode());
 
             Object value;
             value = output_script.run();
