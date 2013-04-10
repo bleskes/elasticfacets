@@ -27,7 +27,7 @@ public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 							XContentFactory.jsonBuilder().startObject()
 									.startObject("facet1")
 									.startObject("hashed_terms")
-									.field("field", "tags?max_doc_terms=10").endObject()
+									.field("field", "tags?max_terms_per_doc=10").endObject()
 									.endObject().endObject().bytes()).execute()
 					.actionGet();
 
@@ -54,7 +54,7 @@ public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
                          XContentFactory.jsonBuilder().startObject()
                                  .startObject("facet1")
                                  .startObject("hashed_terms")
-                                 .field("field", "tags?max_term_docs=10").endObject()
+                                 .field("field", "tags?max_docs_per_term=10").endObject()
                                  .endObject().endObject().bytes()).execute()
                  .actionGet();
 

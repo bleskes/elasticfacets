@@ -113,23 +113,23 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
    public static HashedStringFieldData load(IndexReader reader, String field) throws IOException {
       int i = field.indexOf("?");
-      int maxDocTerms = 0;
-      int maxTermDocs = 0;
+      int max_terms_per_doc = 0;
+      int max_docs_per_term = 0;
       if (i > 0) {
          String qs = field.substring(i + 1);
          field = field.substring(0, i);
          for (String param : qs.split("&")) {
             String[] kv = param.split("=");
-            if ("max_doc_terms".equals(kv[0]))
-               maxDocTerms = Integer.parseInt(kv[1]);
-            else if ("max_term_docs".equals(kv[0]))
-               maxTermDocs = Integer.parseInt(kv[1]);
+            if ("max_terms_per_doc".equals(kv[0]))
+               max_terms_per_doc = Integer.parseInt(kv[1]);
+            else if ("max_docs_per_term".equals(kv[0]))
+               max_docs_per_term = Integer.parseInt(kv[1]);
             else
                throw new ElasticSearchParseException("Unknown field argument: " + kv[0]);
          }
       }
 
-      return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader(), maxDocTerms, maxTermDocs);
+      return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader(), max_terms_per_doc, max_docs_per_term);
    }
 
    static class HashedStringTypeLoader extends CompactFieldDataLoader.FreqsTypeLoader<HashedStringFieldData> {

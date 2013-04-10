@@ -21,9 +21,10 @@ public class CompactFieldDataLoader {
 
    @SuppressWarnings({"StringEquality"})
    public static <T extends FieldData> T load(final IndexReader reader, String field, final TypeLoader<T> loader,
-                                              final int maxDocTerms, final int maxTermDocs) throws IOException {
+                                              final int max_terms_per_doc, final int max_docs_per_term) throws IOException {
 
-      logger.debug("Loading field {}. maxDocTerms {}, maxTermDocs {}", field, maxDocTerms, maxTermDocs);
+      logger.debug("Loading field {}. max_terms_per_doc {}, max_docs_per_term {}", field,
+              max_terms_per_doc, max_docs_per_term);
 
       loader.init();
 
@@ -39,7 +40,7 @@ public class CompactFieldDataLoader {
       readTermsAndDocs(reader, field, new TermsAndDocsProcessor() {
          @Override
          public TERM_STATE startTerm(String term, int termDocCount) {
-            if (maxTermDocs > 0 && termDocCount > maxTermDocs) return TERM_STATE.SKIP;
+            if (max_docs_per_term > 0 && termDocCount > max_docs_per_term) return TERM_STATE.SKIP;
             loader.collectTerm(term); // may stop iteration.
             termCount[0]++;
             return TERM_STATE.PROCESS;
@@ -58,10 +59,10 @@ public class CompactFieldDataLoader {
       if (multiValued[0]) {
 
 
-         if (maxDocTerms > 0) {
+         if (max_terms_per_doc > 0) {
             logger.debug("resetting doc with too many terms");
             for (int i = 0; i < docTermCounts.length; i++) {
-               if (docTermCounts[i] > maxDocTerms) docTermCounts[i] = 0; // reset.
+               if (docTermCounts[i] > max_terms_per_doc) docTermCounts[i] = 0; // reset.
             }
 
          }
@@ -74,7 +75,7 @@ public class CompactFieldDataLoader {
 
             @Override
             public TERM_STATE startTerm(String term, int termDocCount) {
-               if (maxTermDocs > 0 && termDocCount > maxTermDocs) return TERM_STATE.SKIP;
+               if (max_docs_per_term > 0 && termDocCount > max_docs_per_term) return TERM_STATE.SKIP;
                if (t >= termCount[0]) return TERM_STATE.ABORT;
                t++;
                return TERM_STATE.PROCESS;
@@ -98,7 +99,7 @@ public class CompactFieldDataLoader {
 
             @Override
             public TERM_STATE startTerm(String term, int termDocCount) {
-               if (maxDocTerms > 0 && termDocCount > maxDocTerms) return TERM_STATE.SKIP;
+               if (max_terms_per_doc > 0 && termDocCount > max_terms_per_doc) return TERM_STATE.SKIP;
                if (t >= termCount[0]) return TERM_STATE.ABORT;
                t++;
                return TERM_STATE.PROCESS;
