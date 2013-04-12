@@ -231,7 +231,7 @@ public class HashedStringFieldDataTest {
 	}
 
    @Test
-   public void TestMultiValueMaxTerm() throws Exception {
+   public void TestMultiValueMaxTermsPerDoc() throws Exception {
       Directory dir = new RAMDirectory();
       IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(
               Lucene.VERSION, new PatternAnalyzer(Version.LUCENE_36, PatternAnalyzer.WHITESPACE_PATTERN, false, null)));
@@ -257,6 +257,62 @@ public class HashedStringFieldDataTest {
       indexWriter.close();
 
    }
+
+   @Test
+   public void TestMultiValueMinDocsPerTerm() throws Exception {
+      Directory dir = new RAMDirectory();
+      IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(
+              Lucene.VERSION, new PatternAnalyzer(Version.LUCENE_36, PatternAnalyzer.WHITESPACE_PATTERN, false, null)));
+
+      DocumentBuilder d = DocumentBuilder.doc();
+
+      d.add(DocumentBuilder.field("mvalue", "t1"));
+
+      indexWriter.addDocument(d.build());
+
+      indexWriter.addDocument(DocumentBuilder.doc()
+              .add(DocumentBuilder.field("mvalue", "t1"))
+              .add(DocumentBuilder.field("mvalue", "t2")).build());
+
+
+      IndexReader reader = IndexReader.open(indexWriter, true);
+
+      SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) HashedStringFieldData
+              .load(reader, "mvalue?min_docs_per_term=2");
+
+      assertThat(sFieldData.hasValue(0),equalTo(true));
+      final int[] count = {0};
+      sFieldData.forEachValueInDoc(0, new HashedStringFieldData.HashedStringValueInDocProc() {
+         @Override
+         public void onValue(int docId, int Hash) {
+            count[0]++;
+         }
+
+         @Override
+         public void onMissing(int docId) {
+
+         }
+      });
+      assertThat(count[0], equalTo(1));
+
+      count[0]=0;
+      sFieldData.forEachValueInDoc(1, new HashedStringFieldData.HashedStringValueInDocProc() {
+         @Override
+         public void onValue(int docId, int Hash) {
+            count[0]++;
+         }
+
+         @Override
+         public void onMissing(int docId) {
+
+         }
+      });
+      assertThat(sFieldData.hasValue(1), equalTo(true));
+      assertThat(count[0], equalTo(1));
+      indexWriter.close();
+
+   }
+
 
 
    protected int getDocHashes(int docId, HashedStringFieldData sFieldData,

@@ -16,15 +16,17 @@ public class CompactFieldDataLoader {
    final static ESLogger logger = Loggers.getLogger(CompactFieldDataLoader.class);
 
    public static <T extends FieldData> T load(final IndexReader reader, String field, final TypeLoader<T> loader) throws IOException {
-      return load(reader, field, loader, 0, 0);
+      return load(reader, field, loader, 0, 0, 0);
    }
 
    @SuppressWarnings({"StringEquality"})
    public static <T extends FieldData> T load(final IndexReader reader, String field, final TypeLoader<T> loader,
-                                              final int max_terms_per_doc, final int max_docs_per_term) throws IOException {
+                                              final int max_terms_per_doc, final int max_docs_per_term,
+                                              final int min_docs_per_term)
+           throws IOException {
 
-      logger.debug("Loading field {}. max_terms_per_doc {}, max_docs_per_term {}", field,
-              max_terms_per_doc, max_docs_per_term);
+      logger.info("Loading field {}. max_terms_per_doc {}, max_docs_per_term {}, min_docs_per_term {}", field,
+              max_terms_per_doc, max_docs_per_term, min_docs_per_term);
 
       loader.init();
 
@@ -32,6 +34,8 @@ public class CompactFieldDataLoader {
       final int[] docTermCounts = new int[reader.maxDoc()];
       final boolean[] multiValued = {false};
       final int[] termCount = {0};
+      final int[] termsSkippedDueToConstraints = {0};
+      int docsSkippedDueToConstraints = 0;
 
 
       // first sweep, fill in docTermCounts
@@ -40,7 +44,12 @@ public class CompactFieldDataLoader {
       readTermsAndDocs(reader, field, new TermsAndDocsProcessor() {
          @Override
          public TERM_STATE startTerm(String term, int termDocCount) {
-            if (max_docs_per_term > 0 && termDocCount > max_docs_per_term) return TERM_STATE.SKIP;
+            if ((max_docs_per_term > 0 && termDocCount > max_docs_per_term) ||
+                    (min_docs_per_term > 0 && termDocCount < min_docs_per_term)
+                    ) {
+               termsSkippedDueToConstraints[0]++;
+               return TERM_STATE.SKIP;
+            }
             loader.collectTerm(term); // may stop iteration.
             termCount[0]++;
             return TERM_STATE.PROCESS;
@@ -54,7 +63,8 @@ public class CompactFieldDataLoader {
          }
       });
 
-      logger.debug("Field {} initial scan done. Proclaimed {}", field, multiValued[0] ? "multi_valued" : "single_valued");
+      logger.debug("Field {} initial scan done. {} terms dropped due to constraints. Proclaimed {}.",
+              field, termsSkippedDueToConstraints[0], multiValued[0] ? "multi_valued" : "single_valued");
 
       if (multiValued[0]) {
 
@@ -62,7 +72,10 @@ public class CompactFieldDataLoader {
          if (max_terms_per_doc > 0) {
             logger.debug("resetting doc with too many terms");
             for (int i = 0; i < docTermCounts.length; i++) {
-               if (docTermCounts[i] > max_terms_per_doc) docTermCounts[i] = 0; // reset.
+               if (docTermCounts[i] > max_terms_per_doc) {
+                  docTermCounts[i] = 0; // reset.
+                  docsSkippedDueToConstraints++;
+               }
             }
 
          }
@@ -75,7 +88,9 @@ public class CompactFieldDataLoader {
 
             @Override
             public TERM_STATE startTerm(String term, int termDocCount) {
-               if (max_docs_per_term > 0 && termDocCount > max_docs_per_term) return TERM_STATE.SKIP;
+               if ((max_docs_per_term > 0 && termDocCount > max_docs_per_term) ||
+                       (min_docs_per_term > 0 && termDocCount < min_docs_per_term)
+                       ) return TERM_STATE.SKIP;
                if (t >= termCount[0]) return TERM_STATE.ABORT;
                t++;
                return TERM_STATE.PROCESS;
@@ -88,6 +103,9 @@ public class CompactFieldDataLoader {
             }
          });
 
+         logger.debug("finished building ordinal arrays. Ignored {} docs due to constraints",
+                 docsSkippedDueToConstraints);
+
          return loader.buildMultiValue(field, ordinalsArray);
 
 
@@ -99,7 +117,9 @@ public class CompactFieldDataLoader {
 
             @Override
             public TERM_STATE startTerm(String term, int termDocCount) {
-               if (max_terms_per_doc > 0 && termDocCount > max_terms_per_doc) return TERM_STATE.SKIP;
+               if ((max_docs_per_term > 0 && termDocCount > max_docs_per_term) ||
+                       (min_docs_per_term > 0 && termDocCount < min_docs_per_term)
+                       ) return TERM_STATE.SKIP;
                if (t >= termCount[0]) return TERM_STATE.ABORT;
                t++;
                return TERM_STATE.PROCESS;
@@ -110,6 +130,8 @@ public class CompactFieldDataLoader {
                ordinals[doc] = t;
             }
          });
+         logger.debug("finished building ordinal array.");
+
          return loader.buildSingleValue(field, ordinals);
       }
    }
