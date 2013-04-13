@@ -371,8 +371,8 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
             missing++;
             return; // no value no count..
          }
-         counts[ordinal]++;
-         docIdsForValues[ordinal] = docId + docBase;
+         if (counts[ordinal]++ == 0)
+            docIdsForValues[ordinal] = docId + docBase;
          total++;
       }
 
