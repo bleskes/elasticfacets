@@ -5,7 +5,6 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
-import org.elasticsearch.common.CacheRecycler;
 import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
@@ -22,6 +21,7 @@ import org.elasticsearch.search.facet.terms.support.EntryPriorityQueue;
 import org.elasticsearch.search.internal.SearchContext;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
+import org.leskes.elasticfacets.utils.SizeSensitiveCacheRecycler;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -356,14 +356,14 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
       public ReaderAggregator(HashedStringFieldData fieldData, int docBase) {
          this.values = fieldData.values();
-         this.counts = CacheRecycler.popIntArray(fieldData.values().length);
-         this.docIdsForValues = CacheRecycler.popIntArray(fieldData.values().length);
+         this.counts = SizeSensitiveCacheRecycler.popIntArray(fieldData.values().length);
+         this.docIdsForValues = SizeSensitiveCacheRecycler.popIntArray(fieldData.values().length);
          this.docBase = docBase;
       }
 
       public void close() {
-         CacheRecycler.pushIntArray(counts);
-         CacheRecycler.pushIntArray(docIdsForValues);
+         SizeSensitiveCacheRecycler.pushIntArray(counts);
+         SizeSensitiveCacheRecycler.pushIntArray(docIdsForValues);
       }
 
       public void onOrdinal(int docId, int ordinal) {
