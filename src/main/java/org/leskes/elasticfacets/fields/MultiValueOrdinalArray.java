@@ -152,8 +152,8 @@ public class MultiValueOrdinalArray {
       return size;
    }
 
-   public OrdinalLoader createLoader() {
-      return new OrdinalLoader(this);
+   public MultiValueOrdinalLoader createLoader() {
+      return new MultiValueOrdinalLoader(this);
    }
 
    public int maxDoc() {
@@ -161,18 +161,19 @@ public class MultiValueOrdinalArray {
    }
 
 
-   public class OrdinalLoader {
+   public class MultiValueOrdinalLoader implements OrdinalLoader {
 
       // array of the next insertion point for documents
       int [] currentIndexForDocs;
 
       MultiValueOrdinalArray targetArray;
 
-      protected OrdinalLoader(MultiValueOrdinalArray targetArray) {
+      protected MultiValueOrdinalLoader(MultiValueOrdinalArray targetArray) {
          this.targetArray = targetArray;
          currentIndexForDocs = new int[targetArray.firstLevel.length];
       }
 
+      @Override
       public void addDocOrdinal(int docId, int ordinal) {
          int indexForDoc = currentIndexForDocs[docId];
          boolean firstDoc = false;
@@ -211,6 +212,9 @@ public class MultiValueOrdinalArray {
          }
       }
 
+      public MultiValueOrdinalArray getArray() {
+         return targetArray;
+      }
    }
 
    public boolean hasValue(int docId) {

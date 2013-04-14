@@ -41,35 +41,7 @@ public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 			assertThat(facet.entries().get(1).term(),equalTo("term_1"));
 			assertThat(facet.entries().get(1).count(), equalTo(9));
 		}
-	}
-
-   @Test
-   public void MaxTermDocsTest() throws Exception {
-
-      for (int i = 0; i < numberOfRuns(); i++) {
-         SearchResponse searchResponse = client
-                 .prepareSearch()
-                 .setSearchType(SearchType.COUNT)
-                 .setFacets(
-                         XContentFactory.jsonBuilder().startObject()
-                                 .startObject("facet1")
-                                 .startObject("hashed_terms")
-                                 .field("field", "tags?max_docs_per_term=10").endObject()
-                                 .endObject().endObject().bytes()).execute()
-                 .actionGet();
-
-         assertThat(searchResponse.hits().totalHits(), equalTo(documentCount));
-         assertThat(searchResponse.hits().hits().length, equalTo(0));
-         TermsFacet facet = searchResponse.facets().facet("facet1");
-         assertThat(facet.name(), equalTo("facet1"));
-         assertThat(facet.entries().size(), equalTo(10));
-         assertThat(facet.entries().get(0).term(),equalTo("term_90"));
-         assertThat(facet.entries().get(0).count(), equalTo(10));
-         assertThat(facet.entries().get(1).term(),equalTo("term_91"));
-         assertThat(facet.entries().get(1).count(), equalTo(9));
-      }
    }
-
 
    @Override
 	protected void loadData() throws Exception  {

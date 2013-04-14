@@ -54,7 +54,7 @@ public class MultiValueOrdinalArrayTests {
 
       smallMultiValueOrdinalArray ret = new smallMultiValueOrdinalArray(ordinalsNoPerDoc);
 
-      MultiValueOrdinalArray.OrdinalLoader loader = ret.createLoader();
+      MultiValueOrdinalArray.MultiValueOrdinalLoader loader = ret.createLoader();
 
       for (int doc=0;doc<ordinalsPerDoc.size();doc++) {
          for (int o : ordinalsPerDoc.get(doc))

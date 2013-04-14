@@ -4,6 +4,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.util.OpenBitSet;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalStateException;
 import org.elasticsearch.ElasticSearchParseException;
@@ -114,7 +115,6 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
    public static HashedStringFieldData load(IndexReader reader, String field) throws IOException {
       int i = field.indexOf("?");
       int max_terms_per_doc = 0;
-      int max_docs_per_term = 0;
       int min_docs_per_term = 0;
       if (i > 0) {
          String qs = field.substring(i + 1);
@@ -123,8 +123,6 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
             String[] kv = param.split("=");
             if ("max_terms_per_doc".equals(kv[0]))
                max_terms_per_doc = Integer.parseInt(kv[1]);
-            else if ("max_docs_per_term".equals(kv[0]))
-               max_docs_per_term = Integer.parseInt(kv[1]);
             else if ("min_docs_per_term".equals(kv[0]))
                min_docs_per_term = Integer.parseInt(kv[1]);
             else
@@ -132,26 +130,129 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
          }
       }
 
-      return CompactFieldDataLoader.load(reader, field, new HashedStringTypeLoader(), max_terms_per_doc,
-              max_docs_per_term, min_docs_per_term);
+      return MultiSweepFieldDataLoader.load(reader, field,
+              new HashedStringTypeLoader(max_terms_per_doc, min_docs_per_term)
+      );
    }
 
-   static class HashedStringTypeLoader extends CompactFieldDataLoader.FreqsTypeLoader<HashedStringFieldData> {
+   static class HashedStringTypeLoader implements MultiSweepFieldDataLoader.TypeLoader<HashedStringFieldData> {
 
       private final TIntArrayList hashed_terms = new TIntArrayList();
 
       private int[] sorted_hashed_terms;
       private int[] new_location_of_hashed_terms_in_sorted;
 
-      HashedStringTypeLoader() {
+      final int max_terms_per_doc;
+      final int min_docs_per_term;
+
+      OrdinalLoader ordinalLoader = null;
+      int[] docTermsCounts;
+      boolean multiValued = false;
+      final OpenBitSet skippedTermsCache = new OpenBitSet(1000);
+      int termsSkipped;
+      int currentTerm;
+      int currentOrdinal; // if terms are rejected, ordinal is not upgraded.
+      boolean initialSweep;
+      String field;
+
+      HashedStringTypeLoader(int max_terms_per_doc, int min_docs_per_term) {
          super();
+         this.max_terms_per_doc = max_terms_per_doc;
+         this.min_docs_per_term = min_docs_per_term;
          // the first one indicates null value.
          hashed_terms.add(0);
 
       }
 
-      public void collectTerm(String term) {
+      @Override
+      public void init(String field, int docCount) {
+         docTermsCounts = new int[docCount];
+         currentTerm = -1;
+         currentOrdinal = 0; // first ordinal is 1
+         termsSkipped=0;
+         initialSweep = true;
+         this.field = field;
+
+      }
+
+      @Override
+      public boolean finalizeSweep() {
+         if (!initialSweep) return false;
+         initialSweep = false;
+         int docsSkipped = 0;
+
+         if (multiValued) {
+            if (max_terms_per_doc > 0) {
+               logger.debug("resetting doc with too many terms");
+               for (int i = 0; i < docTermsCounts.length; i++) {
+                  if (docTermsCounts[i] > max_terms_per_doc) {
+                     docTermsCounts[i] = 0; // reset.
+                     docsSkipped++;
+                  }
+               }
+
+            }
+            MultiValueOrdinalArray ordinalsArray = new MultiValueOrdinalArray(docTermsCounts);
+            ordinalLoader = ordinalsArray.createLoader();
+         }
+         else {
+            ordinalLoader = new SingleValueOrdinalLoader(docTermsCounts.length);
+         }
+
+         logger.debug("Field {} initial scan done. {} terms ({} skipped). {} docs ({} skipped) Proclaimed {}.",
+                 field, currentTerm+1, termsSkipped, docTermsCounts.length, docsSkipped,
+                 multiValued ? "multi_valued" : "single_valued");
+
+         currentTerm = -1;
+         currentOrdinal = 0;
+
+         return true;
+      }
+
+      private boolean shouldSkipTerm(String term, int termDocCount) {
+         return (min_docs_per_term > 0 && termDocCount < min_docs_per_term);
+      }
+
+      public MultiSweepFieldDataLoader.TERM_STATE collectTerm(String term, int termDocCount) {
+         currentTerm++;
+         if (initialSweep) {
+            // only check skipping
+            boolean skip = shouldSkipTerm(term, termDocCount);
+            if (skip) {
+               termsSkipped++;
+               skippedTermsCache.set(currentTerm);
+               return MultiSweepFieldDataLoader.TERM_STATE.SKIP;
+            }
+            return MultiSweepFieldDataLoader.TERM_STATE.PROCESS;
+         }
+         // second sweep
+         if (skippedTermsCache.get(currentTerm))
+            return MultiSweepFieldDataLoader.TERM_STATE.SKIP;
+
          hashed_terms.add(HashedStringFieldType.hashCode(term));
+         currentOrdinal++;
+         return MultiSweepFieldDataLoader.TERM_STATE.PROCESS;
+      }
+
+      @Override
+      public void addTermDoc(int doc) {
+         if (initialSweep) {
+            if (++docTermsCounts[doc] > 1) multiValued = true;
+         } else {
+            if (docTermsCounts[doc] >0) // 0 marks skipping
+               ordinalLoader.addDocOrdinal(doc, currentOrdinal);
+         }
+      }
+
+      @Override
+      public HashedStringFieldData buildFieldData() {
+         if (multiValued) {
+            MultiValueOrdinalArray array = ((MultiValueOrdinalArray.MultiValueOrdinalLoader) ordinalLoader).getArray();
+            return buildMultiValue(array);
+         } else {
+            int[] array = ((SingleValueOrdinalLoader) ordinalLoader).getOrdinals();
+            return buildSingleValue(array);
+         }
       }
 
       protected void sort_values() {
@@ -188,7 +289,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       }
 
 
-      public HashedStringFieldData buildSingleValue(String field, int[] ordinals) {
+      public HashedStringFieldData buildSingleValue(int[] ordinals) {
 
          sort_values();
 
@@ -198,7 +299,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       }
 
 
-      public HashedStringFieldData buildMultiValue(String field, MultiValueOrdinalArray ordinalsArray) {
+      public HashedStringFieldData buildMultiValue(MultiValueOrdinalArray ordinalsArray) {
          sort_values();
 
          // we need to do translation, count again...
@@ -210,7 +311,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
          }
 
          MultiValueOrdinalArray translatedOrdinals = new MultiValueOrdinalArray(docOrdinalCount);
-         MultiValueOrdinalArray.OrdinalLoader ordLoader = translatedOrdinals.createLoader();
+         MultiValueOrdinalArray.MultiValueOrdinalLoader ordLoader = translatedOrdinals.createLoader();
          for (int docId = 0; docId < docOrdinalCount.length; docId++) {
             MultiValueOrdinalArray.OrdinalIterator ordIterator = ordinalsArray.getOrdinalIteratorForDoc(docId);
             int o = ordIterator.getNextOrdinal();
