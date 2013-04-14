@@ -28,8 +28,8 @@ public class ElasticFacetsPlugin extends AbstractPlugin  {
 	public String description() {
 		return "A plugin adding the Faceted Date Histogram facet type.";
 	}
-	
-	@Override
+
+   @Override
     public void processModule(Module module) {
 		if (module instanceof FacetModule) {
 	    	((FacetModule)module).addFacetProcessor(FacetedDateHistogramFacetProcessor.class);

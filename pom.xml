@@ -16,42 +16,6 @@
 	</repositories>
 	<profiles>
 		<profile>
-			<id>0.20.0</id>
-			<activation>
-				<property>
-					<name>env.ES</name>
-					<value>0.20.0</value>
-				</property>
-			</activation>
-			<dependencies>
-				<dependency>
-					<!-- hard requirement for testing -->
-					<groupId>org.elasticsearch</groupId>
-					<artifactId>elasticsearch</artifactId>
-					<version>[0.20.0]</version>
-					<scope>provided</scope>
-				</dependency>
-			</dependencies>
-		</profile>
-        <profile>
-            <id>0.20.4</id>
-            <activation>
-                <property>
-                    <name>env.ES</name>
-                    <value>0.20.4</value>
-                </property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <!-- hard requirement for testing -->
-                    <groupId>org.elasticsearch</groupId>
-                    <artifactId>elasticsearch</artifactId>
-                    <version>[0.20.4]</version>
-                    <scope>provided</scope>
-                </dependency>
-            </dependencies>
-        </profile>
-        <profile>
             <id>0.20.6</id>
             <activation>
                 <property>
@@ -158,7 +122,7 @@
 
 	</build>
 	<properties>
-		<elasticsearch.version>0.20.2</elasticsearch.version>
+		<elasticsearch.version>0.20.6</elasticsearch.version>
 	</properties>
 
 	<dependencies>

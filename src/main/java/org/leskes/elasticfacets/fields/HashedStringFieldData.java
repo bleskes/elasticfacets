@@ -7,7 +7,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.OpenBitSet;
 import org.elasticsearch.ElasticSearchException;
 import org.elasticsearch.ElasticSearchIllegalStateException;
-import org.elasticsearch.ElasticSearchParseException;
 import org.elasticsearch.common.RamUsage;
 import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
@@ -27,7 +26,7 @@ import java.util.Comparator;
  */
 public abstract class HashedStringFieldData extends FieldData<HashedStringDocFieldData> {
 
-   public static final HashedStringFieldType HASHED_STRING = new HashedStringFieldType();
+   public static final HashedStringFieldType HASHED_STRING_UNLOADABLE = new HashedStringFieldType(null);
 
    protected static final ESLogger logger = Loggers.getLogger(HashedStringFieldData.class);
 
@@ -102,7 +101,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
    @Override
    public FieldDataType type() {
-      return HashedStringFieldData.HASHED_STRING;
+      return HashedStringFieldData.HASHED_STRING_UNLOADABLE;
    }
 
    public static interface HashedStringValueInDocProc {
@@ -112,30 +111,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
    }
 
 
-   public static HashedStringFieldData load(IndexReader reader, String field) throws IOException {
-      int i = field.indexOf("?");
-      int max_terms_per_doc = 0;
-      int min_docs_per_term = 0;
-      if (i > 0) {
-         String qs = field.substring(i + 1);
-         field = field.substring(0, i);
-         for (String param : qs.split("&")) {
-            String[] kv = param.split("=");
-            if ("max_terms_per_doc".equals(kv[0]))
-               max_terms_per_doc = Integer.parseInt(kv[1]);
-            else if ("min_docs_per_term".equals(kv[0]))
-               min_docs_per_term = Integer.parseInt(kv[1]);
-            else
-               throw new ElasticSearchParseException("Unknown field argument: " + kv[0]);
-         }
-      }
-
-      return MultiSweepFieldDataLoader.load(reader, field,
-              new HashedStringTypeLoader(max_terms_per_doc, min_docs_per_term)
-      );
-   }
-
-   static class HashedStringTypeLoader implements MultiSweepFieldDataLoader.TypeLoader<HashedStringFieldData> {
+   public static class HashedStringTypeLoader implements MultiSweepFieldDataLoader.TypeLoader<HashedStringFieldData> {
 
       private final TIntArrayList hashed_terms = new TIntArrayList();
 
@@ -155,7 +131,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       boolean initialSweep;
       String field;
 
-      HashedStringTypeLoader(int max_terms_per_doc, int min_docs_per_term) {
+      public HashedStringTypeLoader(int max_terms_per_doc, int min_docs_per_term) {
          super();
          this.max_terms_per_doc = max_terms_per_doc;
          this.min_docs_per_term = min_docs_per_term;

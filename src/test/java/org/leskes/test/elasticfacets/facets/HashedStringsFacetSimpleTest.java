@@ -2,6 +2,7 @@ package org.leskes.test.elasticfacets.facets;
 
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.testng.annotations.Test;
@@ -16,9 +17,12 @@ import static org.hamcrest.Matchers.equalTo;
  */
 public class HashedStringsFacetSimpleTest extends AbstractFacetTest {
 
-	
-	
-	@Test
+   @Override
+   protected void configureNodeSettings(ImmutableSettings.Builder settingsBuilder) {
+      super.configureNodeSettings(settingsBuilder);
+   }
+
+   @Test
 	public void SimpleHashStringFacet() throws Exception {
 
 		for (int i = 0; i < numberOfRuns(); i++) {

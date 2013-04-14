@@ -86,8 +86,8 @@ public class HashedStringFieldDataTest {
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-		SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) HashedStringFieldData
-				.load(reader, "svalue");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+		SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "svalue");
 
 		assert (sFieldData.fieldName().equals("svalue"));
 		assert (!sFieldData.multiValued());
@@ -128,8 +128,9 @@ public class HashedStringFieldDataTest {
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-		SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) HashedStringFieldData
-				.load(reader, "svalue");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+
+      SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "svalue");
 
 		assertThat(sFieldData.fieldName(), equalTo("svalue"));
 		assertThat(sFieldData.multiValued(), equalTo(false));
@@ -185,8 +186,8 @@ public class HashedStringFieldDataTest {
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-		MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
-				.load(reader, "svalue");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) type.load(reader, "svalue");
 
 		assert (sFieldData.fieldName().equals("svalue"));
 		assert (sFieldData.multiValued());
@@ -222,8 +223,9 @@ public class HashedStringFieldDataTest {
 		
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-		MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
-				.load(reader, "mvalue");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+
+      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) type.load(reader, "mvalue");
 		
 		assertThat(sFieldData.collisions(),equalTo(2));
 		indexWriter.close();
@@ -249,8 +251,9 @@ public class HashedStringFieldDataTest {
 
       IndexReader reader = IndexReader.open(indexWriter, true);
 
-      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) HashedStringFieldData
-              .load(reader, "mvalue?max_terms_per_doc=199");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(199,0));
+
+      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData)type.load(reader, "mvalue");
 
       assertThat(sFieldData.hasValue(0),equalTo(false));
       assertThat(sFieldData.hasValue(1),equalTo(true));
@@ -277,8 +280,10 @@ public class HashedStringFieldDataTest {
 
       IndexReader reader = IndexReader.open(indexWriter, true);
 
-      SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) HashedStringFieldData
-              .load(reader, "mvalue?min_docs_per_term=2");
+
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,2));
+
+      SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "mvalue");
 
       assertThat(sFieldData.hasValue(0),equalTo(true));
       final int[] count = {0};

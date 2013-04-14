@@ -1,7 +1,5 @@
 package org.leskes.elasticfacets.fields;
 
-import java.io.IOException;
-
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.FieldComparator;
 import org.apache.lucene.search.SortField;
@@ -10,6 +8,8 @@ import org.elasticsearch.index.cache.field.data.FieldDataCache;
 import org.elasticsearch.index.field.data.FieldDataType;
 import org.elasticsearch.index.field.data.ints.IntFieldDataComparator;
 import org.elasticsearch.index.field.data.ints.IntFieldDataMissingComparator;
+
+import java.io.IOException;
 
 // Hashed strings are just integers - code is copied from there
 
@@ -20,6 +20,12 @@ public class HashedStringFieldType implements
 		// place holder so we can replace hashing later on...
 		return s.hashCode();
 	}
+
+   protected HashedStringFieldData.HashedStringTypeLoader loader;
+
+   public HashedStringFieldType(HashedStringFieldData.HashedStringTypeLoader loader) {
+      this.loader = loader;
+   }
 
 	public FieldDataType.ExtendedFieldComparatorSource newFieldComparatorSource(
 			final FieldDataCache cache, @Nullable final String missing) {
@@ -90,7 +96,7 @@ public class HashedStringFieldType implements
 	public HashedStringFieldData load(IndexReader reader, String fieldName)
 			throws IOException {
 
-		return HashedStringFieldData.load(reader, fieldName);
+		return MultiSweepFieldDataLoader.load(reader, fieldName, loader);
 	}
 
 }

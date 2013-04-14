@@ -20,6 +20,7 @@ import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.elasticsearch.search.facet.terms.support.EntryPriorityQueue;
 import org.elasticsearch.search.internal.SearchContext;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
+import org.leskes.elasticfacets.fields.HashedStringFieldSettings;
 import org.leskes.elasticfacets.fields.HashedStringFieldType;
 import org.leskes.elasticfacets.utils.SizeSensitiveCacheRecycler;
 
@@ -41,7 +42,6 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
    private final FieldDataCache fieldDataCache;
 
    private final String indexFieldName;
-   private final String indexFieldNameWithParams;
 
    private Analyzer fieldIndexAnalyzer;
 
@@ -84,6 +84,8 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
    private final SearchScript output_script;
 
+   private final HashedStringFieldSettings.FieldTypeFactory hashedStringTypeFactory;
+
    long missing;
    long total;
 
@@ -95,7 +97,7 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
                                       OUTPUT_MODE output_mode,
                                       ImmutableSet<Integer> included, ImmutableSet<Integer> excluded,
                                       String output_script, String output_scriptLang, SearchContext context,
-                                      Map<String, Object> params) {
+                                      Map<String, Object> params, HashedStringFieldSettings.FieldTypeFactory loaderForField) {
       super(facetName);
       this.fieldDataCache = context.fieldDataCache();
       this.size = size;
@@ -104,14 +106,8 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
       this.numberOfShards = context.numberOfShards();
       this.context = context;
       this.output_mode = output_mode;
+      this.hashedStringTypeFactory = loaderForField;
 
-
-      String fieldParams = "";
-      int i = fieldName.indexOf("?");
-      if (i > 0) {
-         fieldParams = fieldName.substring(i + 1);
-         fieldName = fieldName.substring(0, i);
-      }
 
       MapperService.SmartNameFieldMappers smartMappers = context.smartFieldMappers(fieldName);
       if (smartMappers == null || !smartMappers.hasMapper()) {
@@ -141,7 +137,6 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
 
 
       this.indexFieldName = smartMappers.mapper().names().indexName();
-      this.indexFieldNameWithParams = fieldParams.isEmpty() ? this.indexFieldName : this.indexFieldName + "?" + fieldParams;
       this.fieldDataType = smartMappers.mapper().fieldDataType();
 
 
@@ -180,8 +175,8 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
             aggregators.add(current);
          }
       }
-      fieldData = (HashedStringFieldData) fieldDataCache.cache(HashedStringFieldData.HASHED_STRING, reader,
-              indexFieldNameWithParams);
+      fieldData = (HashedStringFieldData) fieldDataCache.cache(hashedStringTypeFactory.getTypeForField(indexFieldName),
+              reader, indexFieldName);
       current = new ReaderAggregator(fieldData, docBase);
    }
 

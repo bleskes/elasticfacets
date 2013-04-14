@@ -1,11 +1,15 @@
 package org.leskes.test.elasticfacets.facets;
 
+import org.elasticsearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
+import org.elasticsearch.action.admin.indices.cache.clear.ClearIndicesCacheRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.search.facet.terms.TermsFacet;
 import org.testng.annotations.Test;
 
+import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -15,11 +19,24 @@ import static org.hamcrest.Matchers.equalTo;
 public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 
    protected long documentCount =0;
-	
-	@Test
+
+   @Override
+   protected void configureNodeSettings(ImmutableSettings.Builder settingsBuilder) {
+      super.configureNodeSettings(settingsBuilder);
+   }
+
+   @Test
 	public void MaxDocTermsTest() throws Exception {
 
 		for (int i = 0; i < numberOfRuns(); i++) {
+
+         ImmutableSettings.Builder  builder = settingsBuilder();
+         builder.put("hashed_string.field.tags.max_terms_per_doc",10+i);
+         client.admin().cluster().updateSettings(new ClusterUpdateSettingsRequest().persistentSettings(builder)).
+                 actionGet();
+
+         client.admin().indices().clearCache(new ClearIndicesCacheRequest()).actionGet();
+
 			SearchResponse searchResponse = client
 					.prepareSearch()
 					.setSearchType(SearchType.COUNT)
@@ -27,7 +44,7 @@ public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 							XContentFactory.jsonBuilder().startObject()
 									.startObject("facet1")
 									.startObject("hashed_terms")
-									.field("field", "tags?max_terms_per_doc=10").endObject()
+									.field("field", "tags").endObject()
 									.endObject().endObject().bytes()).execute()
 					.actionGet();
 
@@ -37,9 +54,9 @@ public class HashedStringsFacetMultiTermsTest extends AbstractFacetTest {
 			assertThat(facet.name(), equalTo("facet1"));
 			assertThat(facet.entries().size(), equalTo(10));
 			assertThat(facet.entries().get(0).term(),equalTo("term_0"));
-			assertThat(facet.entries().get(0).count(), equalTo(10));
+			assertThat(facet.entries().get(0).count(), equalTo(10+i));
 			assertThat(facet.entries().get(1).term(),equalTo("term_1"));
-			assertThat(facet.entries().get(1).count(), equalTo(9));
+			assertThat(facet.entries().get(1).count(), equalTo(9+i));
 		}
    }
 
