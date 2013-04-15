@@ -67,11 +67,11 @@ public class HashedStringFieldSettings extends AbstractIndexShardComponent {
       }
 
       public HashedStringFieldType getTypeForField(String field) {
-         logger.debug("getting type for field {}",field);
+         logger.trace("getting type for field {}",field);
          FieldSettings s= fieldSettings.get(field);
 
          if (s == null) {
-            logger.debug("Falling back to default settings for field {}",field);
+            logger.trace("Falling back to default settings for field {}",field);
             s = fieldSettings.get("");
          }
          HashedStringFieldData.HashedStringTypeLoader loader =
