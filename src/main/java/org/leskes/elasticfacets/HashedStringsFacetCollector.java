@@ -5,10 +5,10 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.util.PriorityQueue;
 import org.elasticsearch.ElasticSearchIllegalArgumentException;
-import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.common.trove.set.hash.TIntHashSet;
 import org.elasticsearch.index.cache.field.data.FieldDataCache;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
@@ -89,13 +89,13 @@ public class HashedStringsFacetCollector extends AbstractFacetCollector {
    long missing;
    long total;
 
-   private final ImmutableSet<Integer> excluded;
-   private final ImmutableSet<Integer> included;
+   private final TIntHashSet excluded;
+   private final TIntHashSet included;
 
    public HashedStringsFacetCollector(String facetName, String fieldName, int size, int fetch_size,
                                       TermsFacet.ComparatorType comparatorType, boolean allTerms,
                                       OUTPUT_MODE output_mode,
-                                      ImmutableSet<Integer> included, ImmutableSet<Integer> excluded,
+                                      TIntHashSet included, TIntHashSet excluded,
                                       String output_script, String output_scriptLang, SearchContext context,
                                       Map<String, Object> params, HashedStringFieldSettings.FieldTypeFactory loaderForField) {
       super(facetName);

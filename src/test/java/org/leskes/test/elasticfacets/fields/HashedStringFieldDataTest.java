@@ -9,6 +9,7 @@ import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.elasticsearch.common.lucene.DocumentBuilder;
 import org.elasticsearch.common.lucene.Lucene;
+import org.elasticsearch.common.trove.set.hash.TIntHashSet;
 import org.elasticsearch.index.analysis.NamedAnalyzer;
 import org.elasticsearch.index.field.data.FieldData.OrdinalInDocProc;
 import org.leskes.elasticfacets.fields.HashedStringFieldData;
@@ -20,6 +21,7 @@ import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -86,7 +88,7 @@ public class HashedStringFieldDataTest {
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0, null, null));
 		SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "svalue");
 
 		assert (sFieldData.fieldName().equals("svalue"));
@@ -128,7 +130,7 @@ public class HashedStringFieldDataTest {
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0, null, null));
 
       SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "svalue");
 
@@ -173,23 +175,23 @@ public class HashedStringFieldDataTest {
 				Lucene.VERSION, Lucene.STANDARD_ANALYZER));
 
 		indexWriter.addDocument(DocumentBuilder.doc()
-				.add(DocumentBuilder.field("svalue", "zzz"))
-				.add(DocumentBuilder.field("svalue", "xxx")).build());
+				.add(DocumentBuilder.field("mvalue", "zzz"))
+				.add(DocumentBuilder.field("mvalue", "xxx")).build());
 
 		indexWriter.addDocument(DocumentBuilder.doc().build());
 
 		indexWriter.addDocument(DocumentBuilder.doc()
-				.add(DocumentBuilder.field("svalue", "aaa")).build());
+				.add(DocumentBuilder.field("mvalue", "aaa")).build());
 
 		indexWriter.addDocument(DocumentBuilder.doc()
-				.add(DocumentBuilder.field("svalue", "aaa")).build());
+				.add(DocumentBuilder.field("mvalue", "aaa")).build());
 
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
-      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) type.load(reader, "svalue");
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0, null, null));
+      MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) type.load(reader, "mvalue");
 
-		assert (sFieldData.fieldName().equals("svalue"));
+		assert (sFieldData.fieldName().equals("mvalue"));
 		assert (sFieldData.multiValued());
 		assertThat(sFieldData.collisions(),equalTo(0));
 
@@ -205,6 +207,55 @@ public class HashedStringFieldDataTest {
 
 		indexWriter.close();
 	}
+
+   @Test
+   public void multiValueHashedStringExcludeTermsTests() throws Exception {
+      Directory dir = new RAMDirectory();
+      IndexWriter indexWriter = new IndexWriter(dir, new IndexWriterConfig(
+              Lucene.VERSION, Lucene.STANDARD_ANALYZER));
+
+      indexWriter.addDocument(DocumentBuilder.doc()
+              .add(DocumentBuilder.field("mvalue", "zzz"))
+              .add(DocumentBuilder.field("mvalue", "xxx"))
+              .add(DocumentBuilder.field("mvalue", "123")).build());
+
+      indexWriter.addDocument(DocumentBuilder.doc().build());
+
+      indexWriter.addDocument(DocumentBuilder.doc()
+              .add(DocumentBuilder.field("mvalue", "aaa")).build());
+
+      indexWriter.addDocument(DocumentBuilder.doc()
+              .add(DocumentBuilder.field("mvalue", "aaa")).build());
+
+      IndexReader reader = IndexReader.open(indexWriter, true);
+
+      TIntHashSet excludeTerms = new TIntHashSet();
+      excludeTerms.add(HashedStringFieldType.hashCode("xxx"));
+
+      Pattern excludePattern = Pattern.compile("\\d{3}|a"); // the a is to test full token matching
+
+      HashedStringFieldType type = new HashedStringFieldType(
+              new HashedStringFieldData.HashedStringTypeLoader(0,0, excludePattern,excludeTerms));
+
+      // we exclude the only multi value, expect a single value array
+      SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "mvalue");
+
+      assert (sFieldData.fieldName().equals("mvalue"));
+      assert (!sFieldData.multiValued());
+      assertThat(sFieldData.collisions(),equalTo(0));
+
+
+
+      assertFieldWithSet(sFieldData, 0, new String[] { "zzz"});
+
+      assertFieldWithSet(sFieldData, 1, new String[] { });
+
+      assertFieldWithSet(sFieldData, 2, new String[] { "aaa" });
+
+      assertFieldWithSet(sFieldData, 3, new String[] { "aaa" });
+
+      indexWriter.close();
+   }
 	
 	@Test
 	public void TestMultiValueCollisionDetection() throws Exception {
@@ -223,7 +274,7 @@ public class HashedStringFieldDataTest {
 		
 		IndexReader reader = IndexReader.open(indexWriter, true);
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0));
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,0, null, null));
 
       MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData) type.load(reader, "mvalue");
 		
@@ -251,7 +302,7 @@ public class HashedStringFieldDataTest {
 
       IndexReader reader = IndexReader.open(indexWriter, true);
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(199,0));
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(199,0, null, null));
 
       MultiValueHashedStringFieldData sFieldData = (MultiValueHashedStringFieldData)type.load(reader, "mvalue");
 
@@ -281,7 +332,7 @@ public class HashedStringFieldDataTest {
       IndexReader reader = IndexReader.open(indexWriter, true);
 
 
-      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,2));
+      HashedStringFieldType type = new HashedStringFieldType(new HashedStringFieldData.HashedStringTypeLoader(0,2, null, null));
 
       SingleValueHashedStringFieldData sFieldData = (SingleValueHashedStringFieldData) type.load(reader, "mvalue");
 

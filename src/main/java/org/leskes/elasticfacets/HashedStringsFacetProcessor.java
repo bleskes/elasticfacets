@@ -1,15 +1,14 @@
 package org.leskes.elasticfacets;
 
-import org.elasticsearch.cluster.settings.ClusterDynamicSettings;
-import org.elasticsearch.cluster.settings.DynamicSettings;
-import org.elasticsearch.common.collect.ImmutableSet;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.trove.set.hash.TIntHashSet;
 import org.elasticsearch.common.xcontent.XContentParser;
-import org.elasticsearch.node.settings.NodeSettingsService;
+import org.elasticsearch.index.service.IndexService;
+import org.elasticsearch.indices.IndicesService;
 import org.elasticsearch.search.facet.Facet;
 import org.elasticsearch.search.facet.FacetCollector;
 import org.elasticsearch.search.facet.FacetProcessor;
@@ -27,30 +26,17 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
 
    final static ESLogger logger = Loggers
            .getLogger(HashedStringsFacetProcessor.class);
-
-   HashedStringFieldSettings.FieldTypeFactory fieldLoaderFactory;
-
-   class ApplySettings implements NodeSettingsService.Listener {
-      @Override
-      public void onRefreshSettings(Settings settings) {
-         HashedStringsFacetProcessor.this.fieldLoaderFactory = HashedStringFieldSettings.processSettings(settings);
-      }
-   }
-
-   private final ApplySettings applySettings = new ApplySettings();
+   private final IndicesService indicesService;
 
 
    @Inject
-   public HashedStringsFacetProcessor(Settings settings, NodeSettingsService nodeSettingsService,
-                                      @ClusterDynamicSettings DynamicSettings dynamicSettings
-                                      ) {
+   public HashedStringsFacetProcessor(Settings settings, IndicesService indicesService)
+   {
       super(settings);
-      fieldLoaderFactory=HashedStringFieldSettings.processSettings(settings);
-      dynamicSettings.addDynamicSettings(HashedStringFieldSettings.HASHED_STRING_PREFIX +".*");
-
-      nodeSettingsService.addListener(applySettings);
+      this.indicesService = indicesService;
 
       HashedStringsFacet.registerStreams();
+
    }
 
 
@@ -67,8 +53,10 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
       HashedStringsFacetCollector.OUTPUT_MODE output_mode = null;
 
 
-      ImmutableSet<Integer> excluded = ImmutableSet.of();
-      ImmutableSet<Integer> included = ImmutableSet.of();
+
+
+      TIntHashSet excluded = new TIntHashSet();
+      TIntHashSet included = new TIntHashSet();
       TermsFacet.ComparatorType comparatorType = TermsFacet.ComparatorType.COUNT;
 
       String currentFieldName = null;
@@ -78,24 +66,21 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
             currentFieldName = parser.currentName();
          } else if (token == XContentParser.Token.START_ARRAY) {
             if ("exclude".equals(currentFieldName)) {
-               ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
                while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                   if (token == XContentParser.Token.VALUE_NUMBER) {
-                     builder.add(parser.intValue());
+                     excluded.add(parser.intValue());
                   } else
-                     builder.add(HashedStringFieldType.hashCode(parser.text()));
+                     excluded.add(HashedStringFieldType.hashCode(parser.text()));
                }
-               excluded = builder.build();
+
             }
             else if ("include".equals(currentFieldName)) {
-               ImmutableSet.Builder<Integer> builder = ImmutableSet.builder();
                while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                   if (token == XContentParser.Token.VALUE_NUMBER) {
-                     builder.add(parser.intValue());
+                     included.add(parser.intValue());
                   } else
-                     builder.add(HashedStringFieldType.hashCode(parser.text()));
+                     included.add(HashedStringFieldType.hashCode(parser.text()));
                }
-               included = builder.build();
             }
          } else if (token.isValue()) {
             if ("field".equals(currentFieldName)) {
@@ -129,9 +114,16 @@ public class HashedStringsFacetProcessor extends AbstractComponent implements
                  HashedStringsFacetCollector.OUTPUT_MODE.TERM;
       }
 
+      IndexService indexService = indicesService.indexService(context.indexShard().shardId().getIndex());
+
+      HashedStringFieldSettings fieldSettings = indexService.shardInjectorSafe(context.indexShard().shardId().id()).
+              getInstance(HashedStringFieldSettings.class);
+
+      HashedStringFieldSettings.FieldTypeFactory fieldTypeFactory = fieldSettings.fieldTypeFactory;
+
       return new HashedStringsFacetCollector(facetName, field, size, fetch_size, comparatorType, allTerms,
               output_mode, included, excluded, output_script, output_scriptLang, context, params,
-              fieldLoaderFactory);
+              fieldTypeFactory);
    }
 
    public String[] types() {

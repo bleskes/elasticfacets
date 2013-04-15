@@ -12,6 +12,7 @@ import org.elasticsearch.common.io.FastStringReader;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.trove.list.array.TIntArrayList;
+import org.elasticsearch.common.trove.set.hash.TIntHashSet;
 import org.elasticsearch.index.field.data.FieldData;
 import org.elasticsearch.index.field.data.FieldDataType;
 import org.elasticsearch.search.internal.SearchContext;
@@ -20,6 +21,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  *
@@ -120,6 +123,8 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
 
       final int max_terms_per_doc;
       final int min_docs_per_term;
+      final Matcher excludeMatcher;
+      final TIntHashSet excludeTerms;
 
       OrdinalLoader ordinalLoader = null;
       int[] docTermsCounts;
@@ -131,10 +136,13 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       boolean initialSweep;
       String field;
 
-      public HashedStringTypeLoader(int max_terms_per_doc, int min_docs_per_term) {
+      public HashedStringTypeLoader(int max_terms_per_doc, int min_docs_per_term, Pattern excludePattern,
+                                    TIntHashSet excludeTerms) {
          super();
          this.max_terms_per_doc = max_terms_per_doc;
          this.min_docs_per_term = min_docs_per_term;
+         this.excludeMatcher = excludePattern != null? excludePattern.matcher(""): null;
+         this.excludeTerms = excludeTerms;
          // the first one indicates null value.
          hashed_terms.add(0);
 
@@ -148,6 +156,10 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
          termsSkipped=0;
          initialSweep = true;
          this.field = field;
+
+         logger.debug("Loading field {}, max_terms_per_doc={} min_docs_per_term={},excludeTerms#={}, excludePattern={}",
+                 field, max_terms_per_doc, min_docs_per_term, excludeTerms==null?0:excludeTerms.size(),
+                 excludeMatcher==null?"":excludeMatcher.pattern().pattern());
 
       }
 
@@ -186,13 +198,21 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       }
 
       private boolean shouldSkipTerm(String term, int termDocCount) {
-         return (min_docs_per_term > 0 && termDocCount < min_docs_per_term);
+         if  (min_docs_per_term > 0 && termDocCount < min_docs_per_term) return true;
+         if (excludeTerms != null && excludeTerms.contains(HashedStringFieldType.hashCode(term))) {
+            return true;
+         }
+         if (excludeMatcher != null)  {
+            excludeMatcher.reset(term);
+            if (excludeMatcher.matches()) return true;
+         }
+         return false;
       }
 
       public MultiSweepFieldDataLoader.TERM_STATE collectTerm(String term, int termDocCount) {
          currentTerm++;
          if (initialSweep) {
-            // only check skipping
+            // only check skipping and cache it for the next round.
             boolean skip = shouldSkipTerm(term, termDocCount);
             if (skip) {
                termsSkipped++;
