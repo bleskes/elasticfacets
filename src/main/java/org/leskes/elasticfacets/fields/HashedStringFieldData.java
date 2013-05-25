@@ -131,6 +131,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       boolean multiValued = false;
       final OpenBitSet skippedTermsCache = new OpenBitSet(1000);
       int termsSkipped;
+      long stringTermsBytes;
       int currentTerm;
       int currentOrdinal; // if terms are rejected, ordinal is not upgraded.
       boolean initialSweep;
@@ -187,8 +188,8 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
             ordinalLoader = new SingleValueOrdinalLoader(docTermsCounts.length);
          }
 
-         logger.debug("Field {} initial scan done. {} terms ({} skipped). {} docs ({} skipped) Proclaimed {}.",
-                 field, currentTerm+1, termsSkipped, docTermsCounts.length, docsSkipped,
+         logger.debug("Field {} initial scan done. {} terms (original byte size {}, {} terms skipped). {} docs ({} skipped) Proclaimed {}.",
+                 field, currentTerm+1, stringTermsBytes, termsSkipped, docTermsCounts.length, docsSkipped,
                  multiValued ? "multi_valued" : "single_valued");
 
          currentTerm = -1;
@@ -212,6 +213,7 @@ public abstract class HashedStringFieldData extends FieldData<HashedStringDocFie
       public MultiSweepFieldDataLoader.TERM_STATE collectTerm(String term, int termDocCount) {
          currentTerm++;
          if (initialSweep) {
+             stringTermsBytes += term.length()*2+40;
             // only check skipping and cache it for the next round.
             boolean skip = shouldSkipTerm(term, termDocCount);
             if (skip) {
